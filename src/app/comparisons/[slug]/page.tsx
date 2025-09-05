@@ -714,39 +714,37 @@ export default function ComparisonDetailPage() {
                       </div>
                     )}
 
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-medium text-green-700 mb-2">Pros</h4>
-                        {contender.pros.length > 0 ? (
-                          <ul className="space-y-1">
-                            {contender.pros.map((pro, index) => (
-                              <li key={index} className="text-sm text-gray-700 flex items-start">
-                                <span className="text-green-600 mr-2">+</span>
-                                {pro}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm text-gray-500 italic">No pros listed</p>
+                    {(contender.pros.length > 0 || contender.cons.length > 0) && (
+                      <div className="space-y-4">
+                        {contender.pros.length > 0 && (
+                          <div>
+                            <h4 className="font-medium text-green-700 mb-2">Pros</h4>
+                            <ul className="space-y-1">
+                              {contender.pros.map((pro, index) => (
+                                <li key={index} className="text-sm text-gray-700 flex items-start">
+                                  <span className="text-green-600 mr-2">+</span>
+                                  {pro}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         )}
-                      </div>
 
-                      <div>
-                        <h4 className="font-medium text-red-700 mb-2">Cons</h4>
-                        {contender.cons.length > 0 ? (
-                          <ul className="space-y-1">
-                            {contender.cons.map((con, index) => (
-                              <li key={index} className="text-sm text-gray-700 flex items-start">
-                                <span className="text-red-600 mr-2">-</span>
-                                {con}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm text-gray-500 italic">No cons listed</p>
+                        {contender.cons.length > 0 && (
+                          <div>
+                            <h4 className="font-medium text-red-700 mb-2">Cons</h4>
+                            <ul className="space-y-1">
+                              {contender.cons.map((con, index) => (
+                                <li key={index} className="text-sm text-gray-700 flex items-start">
+                                  <span className="text-red-600 mr-2">-</span>
+                                  {con}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         )}
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
               </div>
