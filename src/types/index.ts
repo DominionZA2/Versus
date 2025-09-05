@@ -1,7 +1,8 @@
 export interface ComparisonProperty {
   key: string;
   name: string;
-  type: 'text' | 'number' | 'rating'; // rating is 1-5 stars
+  type: 'text' | 'number' | 'rating' | 'datetime'; // rating is 1-5 stars
+  higherIsBetter?: boolean; // for number/rating/datetime types, default true
 }
 
 export interface Comparison {

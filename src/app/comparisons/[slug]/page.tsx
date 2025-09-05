@@ -15,7 +15,19 @@ export default function ComparisonDetailPage() {
   const [isAddingContender, setIsAddingContender] = useState(false);
   const [editingContender, setEditingContender] = useState<string | null>(null);
   const [isManagingProperties, setIsManagingProperties] = useState(false);
-  const [newProperty, setNewProperty] = useState({ name: '', type: 'text' as 'text' | 'number' | 'rating' });
+  const [editingProperty, setEditingProperty] = useState<string | null>(null);
+  const [newProperty, setNewProperty] = useState({ 
+    name: '', 
+    type: 'text' as 'text' | 'number' | 'rating' | 'datetime',
+    higherIsBetter: true
+  });
+  const [editProperty, setEditProperty] = useState({ 
+    name: '', 
+    type: 'text' as 'text' | 'number' | 'rating' | 'datetime',
+    higherIsBetter: true
+  });
+  const [newPropertyError, setNewPropertyError] = useState('');
+  const [editPropertyError, setEditPropertyError] = useState('');
   const [newContender, setNewContender] = useState({
     name: '',
     description: '',
@@ -113,12 +125,21 @@ export default function ComparisonDetailPage() {
   };
 
   const handleAddProperty = () => {
-    if (!comparison || !newProperty.name.trim()) return;
+    if (!comparison) return;
+    
+    if (!newProperty.name.trim()) {
+      setNewPropertyError('Property name is required');
+      return;
+    }
+    
+    // Clear any previous error
+    setNewPropertyError('');
     
     const property: ComparisonProperty = {
       key: storage.generateSlug(newProperty.name.trim()),
       name: newProperty.name.trim(),
-      type: newProperty.type
+      type: newProperty.type,
+      higherIsBetter: (newProperty.type === 'number' || newProperty.type === 'rating' || newProperty.type === 'datetime') ? newProperty.higherIsBetter : undefined
     };
 
     const updatedComparison: Comparison = {
@@ -128,7 +149,55 @@ export default function ComparisonDetailPage() {
 
     storage.saveComparison(updatedComparison);
     setComparison(updatedComparison);
-    setNewProperty({ name: '', type: 'text' });
+    setNewProperty({ name: '', type: 'text', higherIsBetter: true });
+  };
+
+  const handleEditProperty = (property: ComparisonProperty) => {
+    setEditingProperty(property.key);
+    setEditProperty({
+      name: property.name,
+      type: property.type,
+      higherIsBetter: property.higherIsBetter !== false
+    });
+  };
+
+  const handleSavePropertyEdit = () => {
+    if (!comparison || !editingProperty) return;
+    
+    if (!editProperty.name.trim()) {
+      setEditPropertyError('Property name is required');
+      return;
+    }
+    
+    // Clear any previous error
+    setEditPropertyError('');
+    
+    const updatedProperties = comparison.properties.map(prop => 
+      prop.key === editingProperty 
+        ? { 
+            ...prop, 
+            name: editProperty.name.trim(),
+            type: editProperty.type,
+            higherIsBetter: (editProperty.type === 'number' || editProperty.type === 'rating' || editProperty.type === 'datetime') ? editProperty.higherIsBetter : undefined
+          }
+        : prop
+    );
+
+    const updatedComparison: Comparison = {
+      ...comparison,
+      properties: updatedProperties
+    };
+
+    storage.saveComparison(updatedComparison);
+    setComparison(updatedComparison);
+    setEditingProperty(null);
+    setEditProperty({ name: '', type: 'text', higherIsBetter: true });
+  };
+
+  const handleCancelPropertyEdit = () => {
+    setEditingProperty(null);
+    setEditProperty({ name: '', type: 'text', higherIsBetter: true });
+    setEditPropertyError(''); // Clear any validation error
   };
 
   const handleDeleteProperty = (propertyKey: string) => {
@@ -198,25 +267,56 @@ export default function ComparisonDetailPage() {
     }));
   };
 
-  const getHighestPropertyValues = () => {
-    const highestValues: Record<string, number> = {};
+  const getBestPropertyValues = () => {
+    const bestValues: Record<string, number | string> = {};
     
     comparison?.properties.forEach(property => {
       if (property.type === 'number' || property.type === 'rating') {
-        let maxValue = -Infinity;
+        const higherIsBetter = property.higherIsBetter !== false; // default to true
+        let bestValue = higherIsBetter ? -Infinity : Infinity;
+        
         contenders.forEach(contender => {
           const value = contender.properties[property.key];
-          if (typeof value === 'number' && value > maxValue) {
-            maxValue = value;
+          if (typeof value === 'number') {
+            if (higherIsBetter && value > bestValue) {
+              bestValue = value;
+            } else if (!higherIsBetter && value < bestValue) {
+              bestValue = value;
+            }
           }
         });
-        if (maxValue !== -Infinity) {
-          highestValues[property.key] = maxValue;
+        
+        if (bestValue !== -Infinity && bestValue !== Infinity) {
+          bestValues[property.key] = bestValue;
+        }
+      } else if (property.type === 'datetime') {
+        const higherIsBetter = property.higherIsBetter !== false; // default to true (later dates are better)
+        let bestValue: string | null = null;
+        let bestTimestamp = higherIsBetter ? -Infinity : Infinity;
+        
+        contenders.forEach(contender => {
+          const value = contender.properties[property.key];
+          if (typeof value === 'string' && value.trim()) {
+            const timestamp = new Date(value).getTime();
+            if (!isNaN(timestamp)) {
+              if (higherIsBetter && timestamp > bestTimestamp) {
+                bestValue = value;
+                bestTimestamp = timestamp;
+              } else if (!higherIsBetter && timestamp < bestTimestamp) {
+                bestValue = value;
+                bestTimestamp = timestamp;
+              }
+            }
+          }
+        });
+        
+        if (bestValue) {
+          bestValues[property.key] = bestValue;
         }
       }
     });
     
-    return highestValues;
+    return bestValues;
   };
 
   const handleFileUpload = async (file: File, isEdit = false) => {
@@ -414,6 +514,15 @@ export default function ComparisonDetailPage() {
             </span>
           </div>
         );
+      case 'datetime':
+        return (
+          <input
+            type="datetime-local"
+            value={currentValue ? new Date(currentValue as string).toISOString().slice(0, 16) : ''}
+            onChange={(e) => onChange(property.key, e.target.value ? new Date(e.target.value).toISOString() : '')}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        );
       default:
         return null;
     }
@@ -470,17 +579,115 @@ export default function ComparisonDetailPage() {
                 <h3 className="text-lg font-medium mb-3">Current Properties</h3>
                 <div className="space-y-2">
                   {comparison.properties.map((property) => (
-                    <div key={property.key} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-                      <div>
-                        <span className="font-medium">{property.name}</span>
-                        <span className="ml-2 text-sm text-gray-500">({property.type})</span>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteProperty(property.key)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
-                      >
-                        Delete
-                      </button>
+                    <div key={property.key} className="p-3 bg-gray-50 rounded-md">
+                      {editingProperty === property.key ? (
+                        <div className="space-y-3">
+                          <div className="flex gap-3 items-end">
+                            <div className="flex-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Property Name
+                              </label>
+                              <input
+                                type="text"
+                                value={editProperty.name}
+                                onChange={(e) => {
+                                  setEditProperty(prev => ({ ...prev, name: e.target.value }));
+                                  if (editPropertyError) setEditPropertyError(''); // Clear error when user starts typing
+                                }}
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                                  editPropertyError 
+                                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                }`}
+                              />
+                              {editPropertyError && (
+                                <p className="mt-1 text-sm text-red-600">{editPropertyError}</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Type
+                              </label>
+                              <select
+                                value={editProperty.type}
+                                onChange={(e) => setEditProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
+                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="text">Text</option>
+                                <option value="number">Number</option>
+                                <option value="rating">Rating (1-5)</option>
+                                <option value="datetime">Date & Time</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          {(editProperty.type === 'number' || editProperty.type === 'rating' || editProperty.type === 'datetime') && (
+                            <div className="flex items-center space-x-4 p-3 bg-blue-50 rounded-md">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Comparison Direction:
+                              </label>
+                              <label className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="editHigherIsBetter"
+                                  checked={editProperty.higherIsBetter}
+                                  onChange={() => setEditProperty(prev => ({ ...prev, higherIsBetter: true }))}
+                                  className="mr-2"
+                                />
+                                <span className="text-sm">Higher is better</span>
+                                <span className="ml-1 text-xs text-gray-500">(Quality, Rating)</span>
+                              </label>
+                              <label className="flex items-center">
+                                <input
+                                  type="radio"
+                                  name="editHigherIsBetter"
+                                  checked={!editProperty.higherIsBetter}
+                                  onChange={() => setEditProperty(prev => ({ ...prev, higherIsBetter: false }))}
+                                  className="mr-2"
+                                />
+                                <span className="text-sm">Lower is better</span>
+                                <span className="ml-1 text-xs text-gray-500">(Price, Time)</span>
+                              </label>
+                            </div>
+                          )}
+                          
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleSavePropertyEdit}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 text-sm rounded transition-colors"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={handleCancelPropertyEdit}
+                              className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-3 py-1 text-sm rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center">
+                          <div 
+                            className="cursor-pointer hover:text-blue-600 flex-1"
+                            onClick={() => handleEditProperty(property)}
+                          >
+                            <span className="font-medium">{property.name}</span>
+                            <span className="ml-2 text-sm text-gray-500">
+                              ({property.type}
+                              {(property.type === 'number' || property.type === 'rating' || property.type === 'datetime') && 
+                                `, ${property.higherIsBetter !== false ? 'higher is better' : 'lower is better'}`
+                              })
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteProperty(property.key)}
+                            className="text-red-600 hover:text-red-800 font-medium text-sm ml-2"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -489,39 +696,82 @@ export default function ComparisonDetailPage() {
 
             <div className="border-t pt-4">
               <h3 className="text-lg font-medium mb-3">Add New Property</h3>
-              <div className="flex gap-3 items-end">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Property Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newProperty.name}
-                    onChange={(e) => setNewProperty(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Price, Quality, Ease of Use"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Type
-                  </label>
-                  <select
-                    value={newProperty.type}
-                    onChange={(e) => setNewProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' }))}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <div className="space-y-4">
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Property Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newProperty.name}
+                      onChange={(e) => {
+                        setNewProperty(prev => ({ ...prev, name: e.target.value }));
+                        if (newPropertyError) setNewPropertyError(''); // Clear error when user starts typing
+                      }}
+                      placeholder="e.g., Price, Quality, Ease of Use"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                        newPropertyError 
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
+                    />
+                    {newPropertyError && (
+                      <p className="mt-1 text-sm text-red-600">{newPropertyError}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Type
+                    </label>
+                    <select
+                      value={newProperty.type}
+                      onChange={(e) => setNewProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="text">Text</option>
+                      <option value="number">Number</option>
+                      <option value="rating">Rating (1-5)</option>
+                      <option value="datetime">Date & Time</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleAddProperty}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
                   >
-                    <option value="text">Text</option>
-                    <option value="number">Number</option>
-                    <option value="rating">Rating (1-5)</option>
-                  </select>
+                    Add
+                  </button>
                 </div>
-                <button
-                  onClick={handleAddProperty}
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
-                >
-                  Add
-                </button>
+                
+                {(newProperty.type === 'number' || newProperty.type === 'rating' || newProperty.type === 'datetime') && (
+                  <div className="flex items-center space-x-4 p-3 bg-blue-50 rounded-md">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Comparison Direction:
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="higherIsBetter"
+                        checked={newProperty.higherIsBetter}
+                        onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: true }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Higher is better</span>
+                      <span className="ml-1 text-xs text-gray-500">(Quality, Rating)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="higherIsBetter"
+                        checked={!newProperty.higherIsBetter}
+                        onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: false }))}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Lower is better</span>
+                      <span className="ml-1 text-xs text-gray-500">(Price, Time)</span>
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -947,16 +1197,19 @@ export default function ComparisonDetailPage() {
                             const value = contender.properties[property.key];
                             if (value === undefined || value === '') return null;
                             
-                            const highestValues = getHighestPropertyValues();
-                            const isHighest = (property.type === 'number' || property.type === 'rating') && 
-                                            typeof value === 'number' && 
-                                            value === highestValues[property.key] &&
-                                            value > 0;
+                            const bestValues = getBestPropertyValues();
+                            const isBest = ((property.type === 'number' || property.type === 'rating') && 
+                                         typeof value === 'number' && 
+                                         value === bestValues[property.key] &&
+                                         value > 0) ||
+                                         (property.type === 'datetime' &&
+                                         typeof value === 'string' &&
+                                         value === bestValues[property.key]);
                             
                             return (
                               <div key={property.key} className="flex justify-between items-center text-sm">
-                                <span className={`${isHighest ? 'text-green-600 font-medium' : 'text-gray-600'}`}>{property.name}:</span>
-                                <span className={`font-medium ${isHighest ? 'text-green-600' : ''}`}>
+                                <span className={`${isBest ? 'text-green-600 font-medium' : 'text-gray-600'}`}>{property.name}:</span>
+                                <span className={`font-medium ${isBest ? 'text-green-600' : ''}`}>
                                   {property.type === 'rating' ? (
                                     <div className="flex items-center gap-1">
                                       {[1, 2, 3, 4, 5].map((star) => (
@@ -964,15 +1217,17 @@ export default function ComparisonDetailPage() {
                                           key={star}
                                           className={`text-sm ${
                                             (value as number) >= star 
-                                              ? isHighest ? 'text-green-500' : 'text-yellow-400' 
+                                              ? isBest ? 'text-green-500' : 'text-yellow-400' 
                                               : 'text-gray-300'
                                           }`}
                                         >
                                           ★
                                         </span>
                                       ))}
-                                      <span className={`ml-1 ${isHighest ? 'text-green-600' : 'text-gray-600'}`}>({value}/5)</span>
+                                      <span className={`ml-1 ${isBest ? 'text-green-600' : 'text-gray-600'}`}>({value}/5)</span>
                                     </div>
+                                  ) : property.type === 'datetime' ? (
+                                    new Date(value as string).toLocaleString()
                                   ) : (
                                     value
                                   )}
