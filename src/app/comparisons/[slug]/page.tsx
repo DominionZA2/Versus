@@ -985,23 +985,10 @@ export default function ComparisonDetailPage() {
                     )}
 
                     {contender.attachments && contender.attachments.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-gray-700 mb-2">Attachments</h4>
-                        <div className="space-y-2">
-                          {contender.attachments.map((file) => (
-                            <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium">{file.name}</span>
-                                <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
-                              </div>
-                              <button
-                                onClick={() => handleDownloadFile(file)}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Download
-                              </button>
-                            </div>
-                          ))}
+                      <div className="mb-4 pt-3 border-t border-gray-200">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-600">Attachments:</span>
+                          <span className="font-medium">{contender.attachments.length}</span>
                         </div>
                       </div>
                     )}
