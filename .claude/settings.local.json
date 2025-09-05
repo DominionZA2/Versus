@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh api:*)",
+      "Bash(git config:*)",
+      "Bash(gh auth:*)",
+      "Bash(git push:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx supabase:*)",
+      "Bash(docker container prune:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}
