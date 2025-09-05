@@ -173,6 +173,9 @@ export default function ComparisonDetailPage() {
     // Clear any previous error
     setEditPropertyError('');
     
+    const oldProperty = comparison.properties.find(p => p.key === editingProperty);
+    const typeChanged = oldProperty && oldProperty.type !== editProperty.type;
+    
     const updatedProperties = comparison.properties.map(prop => 
       prop.key === editingProperty 
         ? { 
@@ -183,6 +186,67 @@ export default function ComparisonDetailPage() {
           }
         : prop
     );
+
+    // Convert existing values if type changed
+    let updatedContenders = contenders;
+    if (typeChanged) {
+      updatedContenders = contenders.map(contender => {
+        const currentValue = contender.properties[editingProperty];
+        let convertedValue: string | number = currentValue;
+
+        if (currentValue !== undefined && currentValue !== '') {
+          switch (editProperty.type) {
+            case 'number':
+              const numValue = parseFloat(currentValue as string);
+              convertedValue = isNaN(numValue) ? 0 : numValue;
+              break;
+            case 'rating':
+              const ratingValue = parseInt(currentValue as string);
+              convertedValue = isNaN(ratingValue) ? 1 : Math.max(1, Math.min(5, ratingValue));
+              break;
+            case 'text':
+              convertedValue = String(currentValue);
+              break;
+            case 'datetime':
+              if (typeof currentValue === 'string') {
+                // Try to parse as date, fallback to current date if invalid
+                const dateValue = new Date(currentValue);
+                convertedValue = isNaN(dateValue.getTime()) ? new Date().toISOString() : currentValue;
+              } else {
+                convertedValue = new Date().toISOString();
+              }
+              break;
+          }
+        } else {
+          // Set default values for empty properties
+          switch (editProperty.type) {
+            case 'number':
+              convertedValue = 0;
+              break;
+            case 'rating':
+              convertedValue = 1;
+              break;
+            case 'datetime':
+              convertedValue = '';
+              break;
+            default:
+              convertedValue = '';
+          }
+        }
+
+        return {
+          ...contender,
+          properties: {
+            ...contender.properties,
+            [editingProperty]: convertedValue
+          }
+        };
+      });
+
+      // Save updated contenders
+      updatedContenders.forEach(contender => storage.saveContender(contender));
+      setContenders(updatedContenders);
+    }
 
     const updatedComparison: Comparison = {
       ...comparison,
@@ -317,7 +381,7 @@ export default function ComparisonDetailPage() {
         
         contenders.forEach(contender => {
           const value = contender.properties[property.key];
-          if (typeof value === 'number') {
+          if (typeof value === 'number' && value > 0) {
             if (higherIsBetter && value > bestValue) {
               bestValue = value;
             } else if (!higherIsBetter && value < bestValue) {
