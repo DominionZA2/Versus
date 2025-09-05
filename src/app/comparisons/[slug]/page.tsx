@@ -20,13 +20,15 @@ export default function ComparisonDetailPage() {
     name: '',
     description: '',
     pros: [''],
-    cons: ['']
+    cons: [''],
+    properties: {} as Record<string, string | number>
   });
   const [editContender, setEditContender] = useState({
     name: '',
     description: '',
     pros: [''],
-    cons: ['']
+    cons: [''],
+    properties: {} as Record<string, string | number>
   });
 
   useEffect(() => {
@@ -50,13 +52,13 @@ export default function ComparisonDetailPage() {
       description: newContender.description.trim() || undefined,
       pros: newContender.pros.filter(p => p.trim()),
       cons: newContender.cons.filter(c => c.trim()),
-      properties: {},
+      properties: { ...newContender.properties },
       createdAt: new Date().toISOString()
     };
 
     storage.saveContender(contender);
     setContenders(storage.getContenders(comparison.id));
-    setNewContender({ name: '', description: '', pros: [''], cons: [''] });
+    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
     setIsAddingContender(false);
   };
 
@@ -73,7 +75,8 @@ export default function ComparisonDetailPage() {
       name: contender.name,
       description: contender.description || '',
       pros: [...contender.pros, ''], // Add empty string for new entries
-      cons: [...contender.cons, ''] // Add empty string for new entries
+      cons: [...contender.cons, ''], // Add empty string for new entries
+      properties: { ...contender.properties }
     });
   };
 
@@ -89,19 +92,19 @@ export default function ComparisonDetailPage() {
       description: editContender.description.trim() || undefined,
       pros: editContender.pros.filter(p => p.trim()),
       cons: editContender.cons.filter(c => c.trim()),
-      properties: existingContender?.properties || {},
+      properties: { ...editContender.properties },
       createdAt: existingContender?.createdAt || new Date().toISOString()
     };
 
     storage.saveContender(updatedContender);
     setContenders(storage.getContenders(comparison.id));
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''] });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
   };
 
   const handleCancelEdit = () => {
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''] });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
   };
 
   const handleAddProperty = () => {
@@ -188,6 +191,59 @@ export default function ComparisonDetailPage() {
       ...prev,
       [type]: prev[type].filter((_, i) => i !== index)
     }));
+  };
+
+  const renderPropertyInput = (
+    property: ComparisonProperty,
+    value: string | number | undefined,
+    onChange: (key: string, value: string | number) => void
+  ) => {
+    const currentValue = value !== undefined ? value : '';
+
+    switch (property.type) {
+      case 'text':
+        return (
+          <input
+            type="text"
+            value={currentValue}
+            onChange={(e) => onChange(property.key, e.target.value)}
+            placeholder={`Enter ${property.name.toLowerCase()}`}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        );
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={currentValue}
+            onChange={(e) => onChange(property.key, parseFloat(e.target.value) || 0)}
+            placeholder={`Enter ${property.name.toLowerCase()}`}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        );
+      case 'rating':
+        return (
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => onChange(property.key, star)}
+                className={`text-2xl ${
+                  (currentValue as number) >= star ? 'text-yellow-400' : 'text-gray-300'
+                } hover:text-yellow-400 transition-colors`}
+              >
+                ★
+              </button>
+            ))}
+            <span className="ml-2 text-sm text-gray-600">
+              {currentValue ? `${currentValue}/5` : 'Not rated'}
+            </span>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   if (!comparison) {
@@ -341,6 +397,29 @@ export default function ComparisonDetailPage() {
                 />
               </div>
 
+              {comparison.properties.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-3">Properties</h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {comparison.properties.map((property) => (
+                      <div key={property.key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          {property.name} ({property.type})
+                        </label>
+                        {renderPropertyInput(
+                          property,
+                          newContender.properties[property.key],
+                          (key, value) => setNewContender(prev => ({
+                            ...prev,
+                            properties: { ...prev.properties, [key]: value }
+                          }))
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -420,7 +499,7 @@ export default function ComparisonDetailPage() {
                   type="button"
                   onClick={() => {
                     setIsAddingContender(false);
-                    setNewContender({ name: '', description: '', pros: [''], cons: [''] });
+                    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
                   }}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-md transition-colors"
                 >
@@ -467,6 +546,29 @@ export default function ComparisonDetailPage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
+
+                    {comparison.properties.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-medium mb-3">Properties</h4>
+                        <div className="grid gap-4">
+                          {comparison.properties.map((property) => (
+                            <div key={property.key}>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                {property.name} ({property.type})
+                              </label>
+                              {renderPropertyInput(
+                                property,
+                                editContender.properties[property.key],
+                                (key, value) => setEditContender(prev => ({
+                                  ...prev,
+                                  properties: { ...prev.properties, [key]: value }
+                                }))
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-4 mb-4">
                       <div>
@@ -572,6 +674,43 @@ export default function ComparisonDetailPage() {
                     {contender.description && (
                       <div className="mb-4">
                         <p className="text-gray-600 text-sm italic">{contender.description}</p>
+                      </div>
+                    )}
+
+                    {comparison.properties.length > 0 && Object.keys(contender.properties).length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-medium text-gray-700 mb-2">Properties</h4>
+                        <div className="space-y-2">
+                          {comparison.properties.map((property) => {
+                            const value = contender.properties[property.key];
+                            if (value === undefined || value === '') return null;
+                            
+                            return (
+                              <div key={property.key} className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">{property.name}:</span>
+                                <span className="font-medium">
+                                  {property.type === 'rating' ? (
+                                    <div className="flex items-center gap-1">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <span
+                                          key={star}
+                                          className={`text-sm ${
+                                            (value as number) >= star ? 'text-yellow-400' : 'text-gray-300'
+                                          }`}
+                                        >
+                                          ★
+                                        </span>
+                                      ))}
+                                      <span className="ml-1 text-gray-600">({value}/5)</span>
+                                    </div>
+                                  ) : (
+                                    value
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
 
