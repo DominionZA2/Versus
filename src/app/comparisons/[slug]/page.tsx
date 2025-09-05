@@ -300,6 +300,41 @@ export default function ComparisonDetailPage() {
     }
   };
 
+  const handleDropOnCard = async (e: React.DragEvent, contenderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    const file = files[0];
+    
+    // Check file size
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    try {
+      const attachedFile = await handleFileUpload(file);
+      
+      // Find the contender and update it
+      const contender = contenders.find(c => c.id === contenderId);
+      if (contender) {
+        const updatedContender: Contender = {
+          ...contender,
+          attachments: [...(contender.attachments || []), attachedFile]
+        };
+        
+        storage.saveContender(updatedContender);
+        setContenders(storage.getContenders(comparison!.id));
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file. Please try again.');
+    }
+  };
+
   const handleRemoveFile = (fileId: string, isEdit = false) => {
     if (isEdit) {
       setEditContender(prev => ({
@@ -695,7 +730,18 @@ export default function ComparisonDetailPage() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {contenders.map((contender) => (
-              <div key={contender.id} className="bg-white rounded-lg shadow-md p-6">
+              <div 
+                key={contender.id} 
+                className={`bg-white rounded-lg shadow-md p-6 ${
+                  editingContender !== contender.id 
+                    ? 'hover:shadow-lg transition-all duration-200 hover:border-blue-200 border border-transparent' 
+                    : ''
+                }`}
+                onDragOver={editingContender !== contender.id ? handleDragOver : undefined}
+                onDragEnter={editingContender !== contender.id ? handleDragEnter : undefined}
+                onDragLeave={editingContender !== contender.id ? handleDragLeave : undefined}
+                onDrop={editingContender !== contender.id ? (e) => handleDropOnCard(e, contender.id) : undefined}
+              >
                 {editingContender === contender.id ? (
                   <form onSubmit={handleSaveEdit}>
                     <div className="mb-4">
