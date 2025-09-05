@@ -28,6 +28,7 @@ export default function ComparisonDetailPage() {
   });
   const [newPropertyError, setNewPropertyError] = useState('');
   const [editPropertyError, setEditPropertyError] = useState('');
+  const [draggedProperty, setDraggedProperty] = useState<string | null>(null);
   const [newContender, setNewContender] = useState({
     name: '',
     description: '',
@@ -198,6 +199,45 @@ export default function ComparisonDetailPage() {
     setEditingProperty(null);
     setEditProperty({ name: '', type: 'text', higherIsBetter: true });
     setEditPropertyError(''); // Clear any validation error
+  };
+
+  const handlePropertyDragStart = (e: React.DragEvent, propertyKey: string) => {
+    setDraggedProperty(propertyKey);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handlePropertyDragEnd = () => {
+    setDraggedProperty(null);
+  };
+
+  const handlePropertyDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handlePropertyDrop = (e: React.DragEvent, targetPropertyKey: string) => {
+    e.preventDefault();
+    
+    if (!comparison || !draggedProperty || draggedProperty === targetPropertyKey) return;
+
+    const currentProperties = [...comparison.properties];
+    const draggedIndex = currentProperties.findIndex(p => p.key === draggedProperty);
+    const targetIndex = currentProperties.findIndex(p => p.key === targetPropertyKey);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    // Remove the dragged property and insert it at the target position
+    const [removed] = currentProperties.splice(draggedIndex, 1);
+    currentProperties.splice(targetIndex, 0, removed);
+
+    const updatedComparison: Comparison = {
+      ...comparison,
+      properties: currentProperties
+    };
+
+    storage.saveComparison(updatedComparison);
+    setComparison(updatedComparison);
+    setDraggedProperty(null);
   };
 
   const handleDeleteProperty = (propertyKey: string) => {
@@ -572,14 +612,28 @@ export default function ComparisonDetailPage() {
             <h2 className="text-xl font-semibold mb-4">Manage Comparison Properties</h2>
             <p className="text-gray-600 text-sm mb-4">
               Properties are criteria that each contender can be evaluated on (e.g., Price, Quality, Features).
+              <br />
+              <span className="text-blue-600">Drag the ⋮⋮ icon to reorder properties.</span>
             </p>
 
             {comparison.properties.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-3">Current Properties</h3>
                 <div className="space-y-2">
-                  {comparison.properties.map((property) => (
-                    <div key={property.key} className="p-3 bg-gray-50 rounded-md">
+                  {comparison.properties.map((property, index) => (
+                    <div 
+                      key={property.key} 
+                      className={`p-3 bg-gray-50 rounded-md transition-all duration-200 ${
+                        draggedProperty === property.key ? 'opacity-50 scale-95' : ''
+                      } ${
+                        draggedProperty && draggedProperty !== property.key ? 'border-2 border-dashed border-blue-300' : ''
+                      }`}
+                      draggable={editingProperty !== property.key}
+                      onDragStart={(e) => handlePropertyDragStart(e, property.key)}
+                      onDragEnd={handlePropertyDragEnd}
+                      onDragOver={handlePropertyDragOver}
+                      onDrop={(e) => handlePropertyDrop(e, property.key)}
+                    >
                       {editingProperty === property.key ? (
                         <div className="space-y-3">
                           <div className="flex gap-3 items-end">
@@ -668,17 +722,25 @@ export default function ComparisonDetailPage() {
                         </div>
                       ) : (
                         <div className="flex justify-between items-center">
-                          <div 
-                            className="cursor-pointer hover:text-blue-600 flex-1"
-                            onClick={() => handleEditProperty(property)}
-                          >
-                            <span className="font-medium">{property.name}</span>
-                            <span className="ml-2 text-sm text-gray-500">
-                              ({property.type}
-                              {(property.type === 'number' || property.type === 'rating' || property.type === 'datetime') && 
-                                `, ${property.higherIsBetter !== false ? 'higher is better' : 'lower is better'}`
-                              })
-                            </span>
+                          <div className="flex items-center flex-1">
+                            <div 
+                              className="cursor-move mr-3 text-gray-400 hover:text-gray-600"
+                              title="Drag to reorder"
+                            >
+                              <span className="text-lg leading-none">⋮⋮</span>
+                            </div>
+                            <div 
+                              className="cursor-pointer hover:text-blue-600 flex-1"
+                              onClick={() => handleEditProperty(property)}
+                            >
+                              <span className="font-medium">{property.name}</span>
+                              <span className="ml-2 text-sm text-gray-500">
+                                ({property.type}
+                                {(property.type === 'number' || property.type === 'rating' || property.type === 'datetime') && 
+                                  `, ${property.higherIsBetter !== false ? 'higher is better' : 'lower is better'}`
+                                })
+                              </span>
+                            </div>
                           </div>
                           <button
                             onClick={() => handleDeleteProperty(property.key)}
