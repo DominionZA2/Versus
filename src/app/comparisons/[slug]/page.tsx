@@ -193,6 +193,27 @@ export default function ComparisonDetailPage() {
     }));
   };
 
+  const getHighestPropertyValues = () => {
+    const highestValues: Record<string, number> = {};
+    
+    comparison?.properties.forEach(property => {
+      if (property.type === 'number' || property.type === 'rating') {
+        let maxValue = -Infinity;
+        contenders.forEach(contender => {
+          const value = contender.properties[property.key];
+          if (typeof value === 'number' && value > maxValue) {
+            maxValue = value;
+          }
+        });
+        if (maxValue !== -Infinity) {
+          highestValues[property.key] = maxValue;
+        }
+      }
+    });
+    
+    return highestValues;
+  };
+
   const renderPropertyInput = (
     property: ComparisonProperty,
     value: string | number | undefined,
@@ -685,23 +706,31 @@ export default function ComparisonDetailPage() {
                             const value = contender.properties[property.key];
                             if (value === undefined || value === '') return null;
                             
+                            const highestValues = getHighestPropertyValues();
+                            const isHighest = (property.type === 'number' || property.type === 'rating') && 
+                                            typeof value === 'number' && 
+                                            value === highestValues[property.key] &&
+                                            value > 0;
+                            
                             return (
                               <div key={property.key} className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600">{property.name}:</span>
-                                <span className="font-medium">
+                                <span className={`${isHighest ? 'text-green-600 font-medium' : 'text-gray-600'}`}>{property.name}:</span>
+                                <span className={`font-medium ${isHighest ? 'text-green-600' : ''}`}>
                                   {property.type === 'rating' ? (
                                     <div className="flex items-center gap-1">
                                       {[1, 2, 3, 4, 5].map((star) => (
                                         <span
                                           key={star}
                                           className={`text-sm ${
-                                            (value as number) >= star ? 'text-yellow-400' : 'text-gray-300'
+                                            (value as number) >= star 
+                                              ? isHighest ? 'text-green-500' : 'text-yellow-400' 
+                                              : 'text-gray-300'
                                           }`}
                                         >
                                           ★
                                         </span>
                                       ))}
-                                      <span className="ml-1 text-gray-600">({value}/5)</span>
+                                      <span className={`ml-1 ${isHighest ? 'text-green-600' : 'text-gray-600'}`}>({value}/5)</span>
                                     </div>
                                   ) : (
                                     value
