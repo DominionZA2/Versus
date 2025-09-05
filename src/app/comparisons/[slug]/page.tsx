@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Comparison, Contender, ComparisonProperty } from '@/types';
+import { Comparison, Contender, ComparisonProperty, AttachedFile } from '@/types';
 import { storage } from '@/lib/storage';
 
 export default function ComparisonDetailPage() {
@@ -21,14 +21,16 @@ export default function ComparisonDetailPage() {
     description: '',
     pros: [''],
     cons: [''],
-    properties: {} as Record<string, string | number>
+    properties: {} as Record<string, string | number>,
+    attachments: [] as AttachedFile[]
   });
   const [editContender, setEditContender] = useState({
     name: '',
     description: '',
     pros: [''],
     cons: [''],
-    properties: {} as Record<string, string | number>
+    properties: {} as Record<string, string | number>,
+    attachments: [] as AttachedFile[]
   });
 
   useEffect(() => {
@@ -53,12 +55,13 @@ export default function ComparisonDetailPage() {
       pros: newContender.pros.filter(p => p.trim()),
       cons: newContender.cons.filter(c => c.trim()),
       properties: { ...newContender.properties },
+      attachments: [...newContender.attachments],
       createdAt: new Date().toISOString()
     };
 
     storage.saveContender(contender);
     setContenders(storage.getContenders(comparison.id));
-    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
+    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
     setIsAddingContender(false);
   };
 
@@ -76,7 +79,8 @@ export default function ComparisonDetailPage() {
       description: contender.description || '',
       pros: [...contender.pros, ''], // Add empty string for new entries
       cons: [...contender.cons, ''], // Add empty string for new entries
-      properties: { ...contender.properties }
+      properties: { ...contender.properties },
+      attachments: [...(contender.attachments || [])]
     });
   };
 
@@ -93,18 +97,19 @@ export default function ComparisonDetailPage() {
       pros: editContender.pros.filter(p => p.trim()),
       cons: editContender.cons.filter(c => c.trim()),
       properties: { ...editContender.properties },
+      attachments: [...editContender.attachments],
       createdAt: existingContender?.createdAt || new Date().toISOString()
     };
 
     storage.saveContender(updatedContender);
     setContenders(storage.getContenders(comparison.id));
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
   };
 
   const handleCancelEdit = () => {
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
   };
 
   const handleAddProperty = () => {
@@ -212,6 +217,118 @@ export default function ComparisonDetailPage() {
     });
     
     return highestValues;
+  };
+
+  const handleFileUpload = async (file: File, isEdit = false) => {
+    return new Promise<AttachedFile>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const attachedFile: AttachedFile = {
+          id: storage.generateId(),
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: reader.result as string,
+          uploadedAt: new Date().toISOString()
+        };
+        resolve(attachedFile);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const processFile = async (file: File, isEdit = false) => {
+    // Check file size (limit to 5MB to avoid localStorage issues)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    try {
+      const attachedFile = await handleFileUpload(file);
+      
+      if (isEdit) {
+        setEditContender(prev => ({
+          ...prev,
+          attachments: [...prev.attachments, attachedFile]
+        }));
+      } else {
+        setNewContender(prev => ({
+          ...prev,
+          attachments: [...prev.attachments, attachedFile]
+        }));
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file. Please try again.');
+    }
+  };
+
+  const handleAddFile = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await processFile(file, isEdit);
+    
+    // Clear the input
+    e.target.value = '';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent, isEdit = false) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      await processFile(files[0], isEdit);
+    }
+  };
+
+  const handleRemoveFile = (fileId: string, isEdit = false) => {
+    if (isEdit) {
+      setEditContender(prev => ({
+        ...prev,
+        attachments: prev.attachments.filter(f => f.id !== fileId)
+      }));
+    } else {
+      setNewContender(prev => ({
+        ...prev,
+        attachments: prev.attachments.filter(f => f.id !== fileId)
+      }));
+    }
+  };
+
+  const handleDownloadFile = (file: AttachedFile) => {
+    const link = document.createElement('a');
+    link.href = file.data;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const renderPropertyInput = (
@@ -441,6 +558,45 @@ export default function ComparisonDetailPage() {
                 </div>
               )}
 
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3">File Attachments</h3>
+                <div 
+                  className="border border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, false)}
+                >
+                  <input
+                    type="file"
+                    onChange={(e) => handleAddFile(e, false)}
+                    className="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  <p className="text-sm text-gray-500 mb-3">Drag & drop a file here or click to browse • Maximum file size: 5MB</p>
+                  
+                  {newContender.attachments.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm text-gray-700">Attached Files:</h4>
+                      {newContender.attachments.map((file) => (
+                        <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium">{file.name}</span>
+                            <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(file.id, false)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -520,7 +676,7 @@ export default function ComparisonDetailPage() {
                   type="button"
                   onClick={() => {
                     setIsAddingContender(false);
-                    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {} });
+                    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
                   }}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-md transition-colors"
                 >
@@ -590,6 +746,45 @@ export default function ComparisonDetailPage() {
                         </div>
                       </div>
                     )}
+
+                    <div className="mb-4">
+                      <h4 className="font-medium mb-3">File Attachments</h4>
+                      <div 
+                        className="border border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                        onDragOver={handleDragOver}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, true)}
+                      >
+                        <input
+                          type="file"
+                          onChange={(e) => handleAddFile(e, true)}
+                          className="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="text-sm text-gray-500 mb-3">Drag & drop a file here or click to browse • Maximum file size: 5MB</p>
+                        
+                        {editContender.attachments.length > 0 && (
+                          <div className="space-y-2">
+                            <h5 className="font-medium text-sm text-gray-700">Attached Files:</h5>
+                            {editContender.attachments.map((file) => (
+                              <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium">{file.name}</span>
+                                  <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFile(file.id, true)}
+                                  className="text-red-600 hover:text-red-800 text-sm"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
                     <div className="space-y-4 mb-4">
                       <div>
@@ -739,6 +934,28 @@ export default function ComparisonDetailPage() {
                               </div>
                             );
                           })}
+                        </div>
+                      </div>
+                    )}
+
+                    {contender.attachments && contender.attachments.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="font-medium text-gray-700 mb-2">Attachments</h4>
+                        <div className="space-y-2">
+                          {contender.attachments.map((file) => (
+                            <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-medium">{file.name}</span>
+                                <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                              </div>
+                              <button
+                                onClick={() => handleDownloadFile(file)}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                Download
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}

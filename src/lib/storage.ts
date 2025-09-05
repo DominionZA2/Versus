@@ -51,10 +51,11 @@ export const storage = {
     const data = localStorage.getItem(CONTENDERS_KEY);
     const contenders = data ? JSON.parse(data) : [];
     
-    // Ensure backwards compatibility - add properties object if missing
+    // Ensure backwards compatibility - add properties and attachments if missing
     const compatibleContenders = contenders.map((contender: any) => ({
       ...contender,
-      properties: contender.properties || {}
+      properties: contender.properties || {},
+      attachments: contender.attachments || []
     }));
     
     return comparisonId 

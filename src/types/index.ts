@@ -12,6 +12,15 @@ export interface Comparison {
   createdAt: string;
 }
 
+export interface AttachedFile {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  data: string; // base64 encoded file data
+  uploadedAt: string;
+}
+
 export interface Contender {
   id: string;
   comparisonId: string;
@@ -20,6 +29,7 @@ export interface Contender {
   pros: string[];
   cons: string[];
   properties: Record<string, string | number>; // key -> value mapping
+  attachments: AttachedFile[];
   score?: number;
   createdAt: string;
 }
