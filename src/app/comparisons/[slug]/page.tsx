@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Comparison, Contender } from '@/types';
+import { Comparison, Contender, ComparisonProperty } from '@/types';
 import { storage } from '@/lib/storage';
 
 export default function ComparisonDetailPage() {
@@ -14,13 +14,17 @@ export default function ComparisonDetailPage() {
   const [contenders, setContenders] = useState<Contender[]>([]);
   const [isAddingContender, setIsAddingContender] = useState(false);
   const [editingContender, setEditingContender] = useState<string | null>(null);
+  const [isManagingProperties, setIsManagingProperties] = useState(false);
+  const [newProperty, setNewProperty] = useState({ name: '', type: 'text' as 'text' | 'number' | 'rating' });
   const [newContender, setNewContender] = useState({
     name: '',
+    description: '',
     pros: [''],
     cons: ['']
   });
   const [editContender, setEditContender] = useState({
     name: '',
+    description: '',
     pros: [''],
     cons: ['']
   });
@@ -43,14 +47,16 @@ export default function ComparisonDetailPage() {
       id: storage.generateId(),
       comparisonId: comparison.id,
       name: newContender.name.trim(),
+      description: newContender.description.trim() || undefined,
       pros: newContender.pros.filter(p => p.trim()),
       cons: newContender.cons.filter(c => c.trim()),
+      properties: {},
       createdAt: new Date().toISOString()
     };
 
     storage.saveContender(contender);
     setContenders(storage.getContenders(comparison.id));
-    setNewContender({ name: '', pros: [''], cons: [''] });
+    setNewContender({ name: '', description: '', pros: [''], cons: [''] });
     setIsAddingContender(false);
   };
 
@@ -65,6 +71,7 @@ export default function ComparisonDetailPage() {
     setEditingContender(contender.id);
     setEditContender({
       name: contender.name,
+      description: contender.description || '',
       pros: [...contender.pros, ''], // Add empty string for new entries
       cons: [...contender.cons, ''] // Add empty string for new entries
     });
@@ -74,24 +81,71 @@ export default function ComparisonDetailPage() {
     e.preventDefault();
     if (!comparison || !editingContender || !editContender.name.trim()) return;
 
+    const existingContender = contenders.find(c => c.id === editingContender);
     const updatedContender: Contender = {
       id: editingContender,
       comparisonId: comparison.id,
       name: editContender.name.trim(),
+      description: editContender.description.trim() || undefined,
       pros: editContender.pros.filter(p => p.trim()),
       cons: editContender.cons.filter(c => c.trim()),
-      createdAt: contenders.find(c => c.id === editingContender)?.createdAt || new Date().toISOString()
+      properties: existingContender?.properties || {},
+      createdAt: existingContender?.createdAt || new Date().toISOString()
     };
 
     storage.saveContender(updatedContender);
     setContenders(storage.getContenders(comparison.id));
     setEditingContender(null);
-    setEditContender({ name: '', pros: [''], cons: [''] });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''] });
   };
 
   const handleCancelEdit = () => {
     setEditingContender(null);
-    setEditContender({ name: '', pros: [''], cons: [''] });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''] });
+  };
+
+  const handleAddProperty = () => {
+    if (!comparison || !newProperty.name.trim()) return;
+    
+    const property: ComparisonProperty = {
+      key: storage.generateSlug(newProperty.name.trim()),
+      name: newProperty.name.trim(),
+      type: newProperty.type
+    };
+
+    const updatedComparison: Comparison = {
+      ...comparison,
+      properties: [...comparison.properties, property]
+    };
+
+    storage.saveComparison(updatedComparison);
+    setComparison(updatedComparison);
+    setNewProperty({ name: '', type: 'text' });
+  };
+
+  const handleDeleteProperty = (propertyKey: string) => {
+    if (!comparison) return;
+    
+    if (confirm('Are you sure you want to delete this property? All values for this property will be lost.')) {
+      const updatedComparison: Comparison = {
+        ...comparison,
+        properties: comparison.properties.filter(p => p.key !== propertyKey)
+      };
+
+      // Remove this property from all contenders
+      const updatedContenders = contenders.map(contender => ({
+        ...contender,
+        properties: Object.fromEntries(
+          Object.entries(contender.properties).filter(([key]) => key !== propertyKey)
+        )
+      }));
+
+      storage.saveComparison(updatedComparison);
+      updatedContenders.forEach(contender => storage.saveContender(contender));
+      
+      setComparison(updatedComparison);
+      setContenders(storage.getContenders(comparison.id));
+    }
   };
 
   const updateNewContenderArray = (type: 'pros' | 'cons', index: number, value: string) => {
@@ -158,14 +212,100 @@ export default function ComparisonDetailPage() {
           </Link>
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold text-gray-900">{comparison.name}</h1>
-            <button
-              onClick={() => setIsAddingContender(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
-            >
-              Add Contender
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsManagingProperties(true)}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+              >
+                Manage Properties
+              </button>
+              <button
+                onClick={() => setIsAddingContender(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+              >
+                Add Contender
+              </button>
+            </div>
           </div>
         </div>
+
+        {isManagingProperties && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">Manage Comparison Properties</h2>
+            <p className="text-gray-600 text-sm mb-4">
+              Properties are criteria that each contender can be evaluated on (e.g., Price, Quality, Features).
+            </p>
+
+            {comparison.properties.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-3">Current Properties</h3>
+                <div className="space-y-2">
+                  {comparison.properties.map((property) => (
+                    <div key={property.key} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                      <div>
+                        <span className="font-medium">{property.name}</span>
+                        <span className="ml-2 text-sm text-gray-500">({property.type})</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteProperty(property.key)}
+                        className="text-red-600 hover:text-red-800 font-medium text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="border-t pt-4">
+              <h3 className="text-lg font-medium mb-3">Add New Property</h3>
+              <div className="flex gap-3 items-end">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Property Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newProperty.name}
+                    onChange={(e) => setNewProperty(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Price, Quality, Ease of Use"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type
+                  </label>
+                  <select
+                    value={newProperty.type}
+                    onChange={(e) => setNewProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' }))}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                    <option value="rating">Rating (1-5)</option>
+                  </select>
+                </div>
+                <button
+                  onClick={handleAddProperty}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsManagingProperties(false)}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-md transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
 
         {isAddingContender && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -184,6 +324,20 @@ export default function ComparisonDetailPage() {
                   placeholder="Contender name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
+                />
+              </div>
+
+              <div className="mb-4">
+                <label htmlFor="contender-description" className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (optional)
+                </label>
+                <textarea
+                  id="contender-description"
+                  value={newContender.description}
+                  onChange={(e) => setNewContender(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Brief description of this contender"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
@@ -266,7 +420,7 @@ export default function ComparisonDetailPage() {
                   type="button"
                   onClick={() => {
                     setIsAddingContender(false);
-                    setNewContender({ name: '', pros: [''], cons: [''] });
+                    setNewContender({ name: '', description: '', pros: [''], cons: [''] });
                   }}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-md transition-colors"
                 >
@@ -298,6 +452,19 @@ export default function ComparisonDetailPage() {
                         onChange={(e) => setEditContender(prev => ({ ...prev, name: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         autoFocus
+                      />
+                    </div>
+
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description (optional)
+                      </label>
+                      <textarea
+                        value={editContender.description}
+                        onChange={(e) => setEditContender(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Brief description of this contender"
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
 
@@ -401,6 +568,12 @@ export default function ComparisonDetailPage() {
                         Delete
                       </button>
                     </div>
+
+                    {contender.description && (
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm italic">{contender.description}</p>
+                      </div>
+                    )}
 
                     <div className="space-y-4">
                       <div>

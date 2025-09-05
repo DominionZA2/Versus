@@ -8,7 +8,13 @@ export const storage = {
   getComparisons(): Comparison[] {
     if (typeof window === 'undefined') return [];
     const data = localStorage.getItem(COMPARISONS_KEY);
-    return data ? JSON.parse(data) : [];
+    const comparisons = data ? JSON.parse(data) : [];
+    
+    // Ensure backwards compatibility - add properties array if missing
+    return comparisons.map((comp: any) => ({
+      ...comp,
+      properties: comp.properties || []
+    }));
   },
 
   saveComparison(comparison: Comparison): void {
@@ -45,9 +51,15 @@ export const storage = {
     const data = localStorage.getItem(CONTENDERS_KEY);
     const contenders = data ? JSON.parse(data) : [];
     
+    // Ensure backwards compatibility - add properties object if missing
+    const compatibleContenders = contenders.map((contender: any) => ({
+      ...contender,
+      properties: contender.properties || {}
+    }));
+    
     return comparisonId 
-      ? contenders.filter((c: Contender) => c.comparisonId === comparisonId)
-      : contenders;
+      ? compatibleContenders.filter((c: Contender) => c.comparisonId === comparisonId)
+      : compatibleContenders;
   },
 
   saveContender(contender: Contender): void {

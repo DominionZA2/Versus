@@ -22,6 +22,7 @@ export default function ComparisonsPage() {
       id: storage.generateId(),
       name: newComparisonName.trim(),
       slug: storage.generateSlug(newComparisonName.trim()),
+      properties: [],
       createdAt: new Date().toISOString()
     };
 
