@@ -1,0 +1,11 @@
+* text=auto eol=crlf
+*.js text eol=crlf
+*.ts text eol=crlf
+*.tsx text eol=crlf
+*.jsx text eol=crlf
+*.json text eol=crlf
+*.md text eol=crlf
+*.css text eol=crlf
+*.html text eol=crlf
+*.yml text eol=crlf
+*.yaml text eol=crlf

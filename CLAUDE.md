@@ -31,6 +31,13 @@ netstat -ano | findstr :3000
 npm run dev
 ```
 
+## Git Configuration
+
+The project is configured for Windows with CRLF line endings:
+- `core.autocrlf = true`
+- `core.eol = crlf`
+- `.gitattributes` file ensures consistent line endings
+
 ## Project Structure
 
 - `/src/app` - Next.js app router pages

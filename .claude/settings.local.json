@@ -25,7 +25,8 @@
       "Bash(true)",
       "Bash(\"taskkill\" \"/F\" \"/PID\" \"29340\")",
       "Bash(cmd /c:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
