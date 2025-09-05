@@ -1,18 +1,22 @@
-import { redirect } from 'next/navigation'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
-import SignIn from '@/components/auth/sign-in'
+import Link from "next/link";
 
-export default async function HomePage() {
-  const supabase = await createServerSupabaseClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (user) {
-    redirect('/comparisons')
-  }
-
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <SignIn />
+    <div className="container mx-auto px-4 py-16">
+      <div className="max-w-2xl mx-auto text-center">
+        <h1 className="text-5xl font-bold text-gray-900 mb-6">
+          Versus
+        </h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Create comparisons to help you make better decisions
+        </p>
+        <Link 
+          href="/comparisons" 
+          className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors"
+        >
+          View Comparisons
+        </Link>
+      </div>
     </div>
-  )
+  );
 }
