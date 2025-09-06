@@ -16,17 +16,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <header className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center justify-between px-6">
-          <button className="p-2 hover:bg-gray-100 rounded">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <h1 className="text-xl font-bold text-gray-900">Versus</h1>
-          <div className="w-10"></div>
+      <body className={`${inter.className} bg-gray-900 text-gray-100`}>
+        <header className="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6">
+          <h1 className="text-xl font-bold text-white">Versus</h1>
+          <nav className="flex items-center space-x-4">
+            <a href="/comparisons" className="text-gray-300 hover:text-white px-3 py-2 rounded transition-colors">
+              Comparisons
+            </a>
+          </nav>
         </header>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="min-h-screen bg-gray-900">
           {children}
         </div>
       </body>
