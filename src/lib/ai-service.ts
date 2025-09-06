@@ -94,24 +94,25 @@ class AnthropicService implements AIService {
         const basePrompt = `You are an expert at extracting configuration key/value pairs from arbitrary files.
 
 TASK
-Given the file content below, find configuration entries and return them as JSON ONLY.
+Extract only meaningful configuration entries and return them as JSON ONLY.
 
 OUTPUT
-Return a JSON array of objects with properties:
-- name: string (use dot.path for nested keys; keep original key casing)
+Return a JSON object with a single property "properties", which is an array of objects. Each object must contain:
+- name: human-readable string (capitalize words, use spaces instead of dots, e.g., "Inverter Model" not "inverter.model")
 - value: string or number (see typing rules)
 - type: "text" | "number"
 
 RULES
-1) Recognize keys in common formats: JSON, YAML, TOML, INI, .env, XML attributes/elements, shell/PowerShell assignments, and typical config-like code constants.
-2) Ignore comments and disabled lines (e.g., starting with #, //, ;, /* ... */) and empty lines.
-3) For duplicates, keep the last effective value in the file.
-4) For nested structures, build name as a dot path (e.g., server.port, database.host).
-5) Arrays -> join values with commas into a single string (type = "text").
-6) Numbers: if the value is purely numeric (integer or float, optional leading sign), set type="number" and output value as a JSON number. Otherwise set type="text" and output the original textual value unmodified.
-7) Booleans are "text".
-8) If nothing is found, return [].
-9) Do not include any commentary, code fences, or explanations—JSON only.`;
+1) Ignore invoice headers, quote details, company info, addresses, dates, and other administrative metadata. Only return actual configuration items (hardware, software, or technical parameters).
+2) Recognize keys in common formats: JSON, YAML, TOML, INI, .env, XML attributes/elements, shell/PowerShell assignments, and typical config-like code constants.
+3) Ignore comments and disabled lines (e.g., starting with #, //, ;, /* ... */) and empty lines.
+4) For duplicates, keep the last effective value in the file.
+5) For nested structures, create a readable name by joining words with spaces (e.g., "Solar Panels Quantity").
+6) Arrays -> join values with commas into a single string (type = "text").
+7) Numbers: if the value is purely numeric (integer or float, optional leading sign), set type="number" and output value as a JSON number. Otherwise set type="text" and output the original textual value unmodified.
+8) Booleans are "text".
+9) If nothing is found, return {"properties": []}.
+10) Do not include any commentary, code fences, or explanations—JSON only.`;
 
         const userInstructions = context?.customInstructions;
         const contextInfo = [
