@@ -34,7 +34,13 @@
       "Bash(wmic process where:*)",
       "Bash(node:*)",
       "Bash(npm run build:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(./start-dev.bat)",
+      "Bash(start-dev.bat)",
+      "Bash(dir)",
+      "Bash(tasklist:*)",
+      "Bash(chmod:*)",
+      "Bash(./start-dev.sh:*)"
     ],
     "deny": []
   }

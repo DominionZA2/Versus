@@ -72,70 +72,70 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
   const handleModelChange = (model: string) => {
     setSelectedModel(model);
-    // Don't save immediately - wait for Save button
+    // Auto-save after a short delay
+    setTimeout(() => {
+      saveModelAndProvider(model);
+    }, 100);
   };
 
   const handleTempApiKeyChange = (provider: 'anthropic' | 'openai', apiKey: string) => {
     setTempApiKeys(prev => ({ ...prev, [provider]: apiKey }));
+    // Auto-save API key after a delay
+    setTimeout(() => {
+      saveApiKey(provider, apiKey);
+    }, 500);
   };
 
-  const startEditing = () => {
-    setTempApiKeys({ ...apiKeys });
-    setIsEditing(true);
-  };
-
-  const saveChanges = () => {
-    // Update both apiKeys and save to service
-    setApiKeys(tempApiKeys);
+  const saveApiKey = (provider: 'anthropic' | 'openai', apiKey: string) => {
+    // Update local state
+    setApiKeys(prev => ({ ...prev, [provider]: apiKey }));
     
-    // Get the selected model's provider to determine which provider should be active
+    // Save to service
+    const providerConfig: AIProviderConfig = {
+      provider,
+      apiKey,
+      model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini',
+      enabled: apiKey.trim() !== ''
+    };
+    
+    aiService.updateProvider(providerConfig);
+    
+    // Update local config
+    const newConfig = { ...config };
+    const existingIndex = newConfig.providers.findIndex(p => p.provider === provider);
+    if (existingIndex >= 0) {
+      newConfig.providers[existingIndex] = providerConfig;
+    } else {
+      newConfig.providers.push(providerConfig);
+    }
+    setConfig(newConfig);
+  };
+
+  const saveModelAndProvider = (model: string) => {
+    // Get the selected model's provider
     let activeProvider: 'anthropic' | 'openai' | 'none' = 'none';
-    if (selectedModel) {
-      const modelInfo = getAllModels().find(m => m.value === selectedModel);
+    if (model) {
+      const modelInfo = getAllModels().find(m => m.value === model);
       if (modelInfo && modelInfo.provider) {
         activeProvider = modelInfo.provider;
       }
     }
     
-    // Save each provider
-    Object.entries(tempApiKeys).forEach(([provider, apiKey]) => {
-      const providerKey = provider as 'anthropic' | 'openai';
-      const providerConfig: AIProviderConfig = {
-        provider: providerKey,
-        apiKey,
-        model: providerKey === activeProvider ? selectedModel : (providerKey === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini'),
-        enabled: apiKey.trim() !== ''
-      };
-      
-      aiService.updateProvider(providerConfig);
-      
-      // Update local config
-      const newConfig = { ...config };
-      const existingIndex = newConfig.providers.findIndex(p => p.provider === providerKey);
-      if (existingIndex >= 0) {
-        newConfig.providers[existingIndex] = providerConfig;
-      } else {
-        newConfig.providers.push(providerConfig);
-      }
-      setConfig(newConfig);
-    });
-
-    // Set the active provider based on selected model
-    if (selectedModel && activeProvider !== 'none' && tempApiKeys[activeProvider].trim() !== '') {
+    // Set the active provider and model
+    if (model && activeProvider !== 'none' && apiKeys[activeProvider]?.trim()) {
       aiService.setActiveProvider(activeProvider);
       const newConfig = { ...config };
       newConfig.activeProvider = activeProvider;
+      
+      // Update the provider's model
+      const existingIndex = newConfig.providers.findIndex(p => p.provider === activeProvider);
+      if (existingIndex >= 0) {
+        newConfig.providers[existingIndex].model = model;
+        aiService.updateProvider(newConfig.providers[existingIndex]);
+      }
+      
       setConfig(newConfig);
     }
-    
-    setIsEditing(false);
-    onClose?.();
-  };
-
-  const cancelChanges = () => {
-    setTempApiKeys({ ...apiKeys });
-    setIsEditing(false);
-    onClose?.();
   };
 
   const getCurrentProvider = (): 'anthropic' | 'openai' | null => {
@@ -234,27 +234,6 @@ export default function AISettings({ onClose }: AISettingsProps) {
       </p>
 
       <div className="space-y-6">
-        {/* Model Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            AI Model
-          </label>
-          <select
-            value={selectedModel}
-            onChange={(e) => handleModelChange(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {getAllModels().map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-gray-500">
-            Select which AI model to use for analysis features
-          </p>
-        </div>
-
         {/* API Keys */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-200">API Keys</h3>
@@ -296,18 +275,18 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   <button
                     onClick={() => testApiKey('anthropic')}
                     disabled={isTestingConnection === 'anthropic'}
-                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-md transition-colors"
+                    className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:text-gray-500 text-gray-100 rounded-md transition-colors"
                   >
                     {isTestingConnection === 'anthropic' ? 'Testing...' : 'Test'}
                   </button>
                   {connectionStatus['anthropic'] === 'success' && (
-                    <span className="text-green-600 text-sm">✓ Connected</span>
+                    <span className="text-green-400 text-sm">✓ Connected</span>
                   )}
                 </div>
               )}
             </div>
             {connectionStatus['anthropic'] === 'error' && testError['anthropic'] && (
-              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
                 <p className="font-semibold mb-1">Connection Failed:</p>
                 <pre className="whitespace-pre-wrap">{testError['anthropic']}</pre>
               </div>
@@ -351,18 +330,18 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   <button
                     onClick={() => testApiKey('openai')}
                     disabled={isTestingConnection === 'openai'}
-                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-md transition-colors"
+                    className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:text-gray-500 text-gray-100 rounded-md transition-colors"
                   >
                     {isTestingConnection === 'openai' ? 'Testing...' : 'Test'}
                   </button>
                   {connectionStatus['openai'] === 'success' && (
-                    <span className="text-green-600 text-sm">✓ Connected</span>
+                    <span className="text-green-400 text-sm">✓ Connected</span>
                   )}
                 </div>
               )}
             </div>
             {connectionStatus['openai'] === 'error' && testError['openai'] && (
-              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
                 <p className="font-semibold mb-1">Connection Failed:</p>
                 <pre className="whitespace-pre-wrap">{testError['openai']}</pre>
               </div>
@@ -370,14 +349,36 @@ export default function AISettings({ onClose }: AISettingsProps) {
           </div>
         </div>
 
+        {/* Model Selection - After API Keys */}
+        {(apiKeys.anthropic.trim() !== '' || apiKeys.openai.trim() !== '') && (
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              AI Model
+            </label>
+            <select
+              value={selectedModel}
+              onChange={(e) => handleModelChange(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {getAllModels().map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              Select which AI model to use for analysis features
+            </p>
+          </div>
+        )}
 
         {/* AI Features Preview */}
         {selectedModel && currentApiKey && (
-          <div className="bg-green-50 border border-green-200 rounded-md p-4">
-            <h3 className="text-sm font-medium text-green-800 mb-2">
+          <div className="bg-green-900/20 border border-green-800 rounded-md p-4">
+            <h3 className="text-sm font-medium text-green-300 mb-2">
               AI Features Available (using {getAllModels().find(m => m.value === selectedModel)?.label}):
             </h3>
-            <ul className="text-sm text-green-700 space-y-1">
+            <ul className="text-sm text-green-400 space-y-1">
               <li>• Extract properties from contender descriptions and attachments</li>
               <li>• Generate summaries from long text content</li>
               <li>• Suggest property values based on content analysis</li>
@@ -387,14 +388,14 @@ export default function AISettings({ onClose }: AISettingsProps) {
         )}
 
         {!selectedModel && (
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-            <p className="text-sm text-gray-600">
+          <div className="bg-gray-800 border border-gray-700 rounded-md p-4">
+            <p className="text-sm text-gray-400">
               Select an AI model above to get started with AI features for automatic content analysis and property extraction.
             </p>
           </div>
         )}
 
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-400">
           Your API keys are stored locally in your browser and never sent to our servers.
         </p>
       </div>
