@@ -20,6 +20,7 @@ export default function ComparisonDetailPage() {
   const [activePropertiesTab, setActivePropertiesTab] = useState<'properties' | 'ai-analysis'>('properties');
   const [isAnalyzingFiles, setIsAnalyzingFiles] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<string | null>(null);
+  const [isAiAvailable, setIsAiAvailable] = useState(false);
   const defaultInstructions = `For tables or lists with product information:
 - Combine code + description as property name (e.g., "ABC123 - Product Name")
 - Use net price, final price, or total as the value
@@ -61,6 +62,19 @@ For general documents:
     const savedInstructions = localStorage.getItem('ai_custom_instructions');
     setCustomInstructions(savedInstructions || defaultInstructions);
   }, [slug, defaultInstructions]);
+
+  // Check AI availability
+  useEffect(() => {
+    const checkAiAvailability = () => {
+      setIsAiAvailable(aiService.isEnabled());
+    };
+    
+    checkAiAvailability();
+    
+    // Check periodically in case settings change in another tab
+    const interval = setInterval(checkAiAvailability, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleAddContender = (contender: Contender) => {
     if (!comparison) return;
@@ -568,18 +582,16 @@ For general documents:
               >
                 Properties
               </button>
-              {aiService.isEnabled() && (
-                <button
-                  onClick={() => setActivePropertiesTab('ai-analysis')}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ml-4 ${
-                    activePropertiesTab === 'ai-analysis' 
-                      ? 'border-blue-500 text-blue-400' 
-                      : 'border-transparent text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  AI Analysis
-                </button>
-              )}
+              <button
+                onClick={() => setActivePropertiesTab('ai-analysis')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ml-4 ${
+                  activePropertiesTab === 'ai-analysis' 
+                    ? 'border-blue-500 text-blue-400' 
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                AI Analysis
+              </button>
             </div>
 
             {/* Properties Tab Content */}
@@ -821,6 +833,28 @@ For general documents:
                   Analyze attached files to automatically extract properties and values for comparison.
                 </p>
                 
+                {!isAiAvailable && (
+                  <div className="bg-amber-900/20 border border-amber-800 rounded-md p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <span className="text-amber-400 text-lg">⚠️</span>
+                      </div>
+                      <div>
+                        <h3 className="text-amber-300 font-medium mb-2">No AI Model Configured</h3>
+                        <p className="text-amber-200 text-sm mb-3">
+                          To use AI analysis features, you need to configure an AI model with a valid API key.
+                        </p>
+                        <Link 
+                          href="/ai-settings" 
+                          className="inline-flex items-center px-3 py-2 text-sm font-medium text-amber-900 bg-amber-400 rounded-md hover:bg-amber-300 transition-colors"
+                        >
+                          Configure AI Settings
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Custom Instructions */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -833,8 +867,13 @@ For general documents:
                       localStorage.setItem('ai_custom_instructions', e.target.value);
                     }}
                     placeholder="Describe how to extract properties from your files..."
-                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      isAiAvailable 
+                        ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        : 'bg-gray-700 border-gray-600 text-gray-400 placeholder-gray-500 cursor-not-allowed'
+                    }`}
                     rows={6}
+                    disabled={!isAiAvailable}
                   />
                   <p className="mt-1 text-xs text-gray-400">
                     Customize how the AI should extract properties and values from your files. The AI will always return JSON format.
@@ -844,12 +883,13 @@ For general documents:
                 <div className="flex gap-2 mb-4">
                   <button
                     onClick={handleAnalyzeFiles}
-                    disabled={isAnalyzingFiles}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold px-4 py-2 rounded-md transition-colors"
+                    disabled={isAnalyzingFiles || !isAiAvailable}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-md transition-colors"
                   >
                     {isAnalyzingFiles ? 'Analyzing Files...' : 'Analyze Attachments'}
                   </button>
                 </div>
+                
                 {analysisResults && (
                   <div className="bg-gray-700 border border-gray-600 rounded-md p-4">
                     <h4 className="font-medium text-gray-200 mb-2">Analysis Results:</h4>
