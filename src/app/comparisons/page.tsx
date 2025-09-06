@@ -2,17 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Comparison } from '@/types';
 import { storage } from '@/lib/storage';
 
 export default function ComparisonsPage() {
+  const searchParams = useSearchParams();
   const [comparisons, setComparisons] = useState<Comparison[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newComparisonName, setNewComparisonName] = useState('');
 
   useEffect(() => {
     setComparisons(storage.getComparisons());
-  }, []);
+    
+    // Check if we should auto-open the create form
+    const shouldCreate = searchParams.get('create') === 'true';
+    if (shouldCreate) {
+      setIsCreating(true);
+    }
+  }, [searchParams]);
 
   const handleCreateComparison = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,12 +52,14 @@ export default function ComparisonsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-100">Your Comparisons</h1>
-          <button
-            onClick={() => setIsCreating(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
-          >
-            New Comparison
-          </button>
+          {!isCreating && (
+            <button
+              onClick={() => setIsCreating(true)}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+            >
+              New Comparison
+            </button>
+          )}
         </div>
 
         {isCreating && (
@@ -66,7 +76,7 @@ export default function ComparisonsPage() {
                   value={newComparisonName}
                   onChange={(e) => setNewComparisonName(e.target.value)}
                   placeholder="e.g. Best Coffee Shops, Phone Options, etc."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   autoFocus
                 />
               </div>
