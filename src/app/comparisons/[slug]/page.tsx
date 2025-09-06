@@ -938,14 +938,12 @@ For general documents:
                       </div>
                     )}
 
-                    {contender.attachments && contender.attachments.length > 0 && (
-                      <div className="mb-4 pt-3 border-t border-gray-600">
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-300">Attachments:</span>
-                          <span className="font-medium text-gray-100">{contender.attachments.length}</span>
-                        </div>
+                    <div className="mb-4 pt-3 border-t border-gray-600">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-300">Attachments:</span>
+                        <span className="font-medium text-gray-100">{contender.attachments?.length || 0}</span>
                       </div>
-                    )}
+                    </div>
 
                     {contender.hyperlinks && contender.hyperlinks.length > 0 && (
                       <div className="mb-4 pt-3 border-t border-gray-600">
