@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Comparison } from '@/types';
 import { storage } from '@/lib/storage';
 
-export default function ComparisonsPage() {
+function ComparisonsContent() {
   const searchParams = useSearchParams();
   const [comparisons, setComparisons] = useState<Comparison[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -24,7 +24,12 @@ export default function ComparisonsPage() {
 
   const handleCreateComparison = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComparisonName.trim()) return;
+    console.log('Form submitted, name:', newComparisonName);
+    
+    if (!newComparisonName.trim()) {
+      console.log('Name is empty, returning');
+      return;
+    }
 
     const comparison: Comparison = {
       id: storage.generateId(),
@@ -34,10 +39,19 @@ export default function ComparisonsPage() {
       createdAt: new Date().toISOString()
     };
 
-    storage.saveComparison(comparison);
-    setComparisons(storage.getComparisons());
-    setNewComparisonName('');
-    setIsCreating(false);
+    console.log('Creating comparison:', comparison);
+    
+    try {
+      storage.saveComparison(comparison);
+      setComparisons(storage.getComparisons());
+      setNewComparisonName('');
+      setIsCreating(false);
+      console.log('Comparison created successfully');
+      // Navigate to the new comparison
+      window.location.href = `/comparisons/${comparison.slug}`;
+    } catch (error) {
+      console.error('Error creating comparison:', error);
+    }
   };
 
   const handleDeleteComparison = (id: string) => {
@@ -54,7 +68,10 @@ export default function ComparisonsPage() {
           <h1 className="text-3xl font-bold text-gray-100">Your Comparisons</h1>
           {!isCreating && (
             <button
-              onClick={() => setIsCreating(true)}
+              onClick={() => {
+                console.log('New Comparison button clicked');
+                setIsCreating(true);
+              }}
               className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
             >
               New Comparison
@@ -135,5 +152,13 @@ export default function ComparisonsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ComparisonsPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-8"><div className="text-center">Loading...</div></div>}>
+      <ComparisonsContent />
+    </Suspense>
   );
 }

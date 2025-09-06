@@ -227,18 +227,6 @@ export default function AISettings({ onClose }: AISettingsProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-100">AI Integration</h2>
         <div className="flex gap-2">
-          <button
-            onClick={saveChanges}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
-          >
-            Save
-          </button>
-          <button
-            onClick={cancelChanges}
-            className="bg-gray-600 hover:bg-gray-500 text-gray-200 font-semibold px-4 py-2 rounded-md transition-colors"
-          >
-            Cancel
-          </button>
         </div>
       </div>
       <p className="text-gray-400 text-sm mb-6">
@@ -262,7 +250,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-gray-500">
             Select which AI model to use for analysis features
           </p>
         </div>
@@ -308,7 +296,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   <button
                     onClick={() => testApiKey('anthropic')}
                     disabled={isTestingConnection === 'anthropic'}
-                    className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-gray-200 rounded-md transition-colors"
+                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-md transition-colors"
                   >
                     {isTestingConnection === 'anthropic' ? 'Testing...' : 'Test'}
                   </button>
@@ -363,7 +351,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   <button
                     onClick={() => testApiKey('openai')}
                     disabled={isTestingConnection === 'openai'}
-                    className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-gray-200 rounded-md transition-colors"
+                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 rounded-md transition-colors"
                   >
                     {isTestingConnection === 'openai' ? 'Testing...' : 'Test'}
                   </button>
@@ -399,14 +387,14 @@ export default function AISettings({ onClose }: AISettingsProps) {
         )}
 
         {!selectedModel && (
-          <div className="bg-gray-800 border border-gray-600 rounded-md p-4">
-            <p className="text-sm text-gray-300">
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+            <p className="text-sm text-gray-600">
               Select an AI model above to get started with AI features for automatic content analysis and property extraction.
             </p>
           </div>
         )}
 
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-500">
           Your API keys are stored locally in your browser and never sent to our servers.
         </p>
       </div>

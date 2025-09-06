@@ -31,7 +31,10 @@
       "Bash(npm run typecheck:*)",
       "Bash(npx tsc:*)",
       "Bash(tasklist)",
-      "Bash(wmic process where:*)"
+      "Bash(wmic process where:*)",
+      "Bash(node:*)",
+      "Bash(npm run build:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

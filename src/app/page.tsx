@@ -7,13 +7,17 @@ export default function HomePage() {
   const router = useRouter();
 
   const handleGetStarted = () => {
+    console.log('Get Started button clicked');
     const existingComparisons = storage.getComparisons();
+    console.log('Existing comparisons:', existingComparisons);
     
     if (existingComparisons.length === 0) {
       // No comparisons exist, go directly to create new comparison
+      console.log('No comparisons found, navigating to create new');
       router.push('/comparisons?create=true');
     } else {
       // Show existing comparisons
+      console.log('Existing comparisons found, navigating to list');
       router.push('/comparisons');
     }
   };
