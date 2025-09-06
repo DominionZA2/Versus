@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { Comparison, Contender, ComparisonProperty, AttachedFile, Hyperlink } from '@/types';
 import { aiService } from '@/lib/ai-service';
 import { storage } from '@/lib/storage';
+import AnalysisResultsTabs from '@/components/AnalysisResultsTabs';
+import AILoadingAnimation from '@/components/AILoadingAnimation';
+import FileAnalysisList from '@/components/FileAnalysisList';
 import ContenderForm from '@/components/ContenderForm';
 
 export default function ComparisonDetailPage() {
@@ -19,7 +22,16 @@ export default function ComparisonDetailPage() {
   const [isManagingProperties, setIsManagingProperties] = useState(false);
   const [activePropertiesTab, setActivePropertiesTab] = useState<'properties' | 'ai-analysis'>('properties');
   const [isAnalyzingFiles, setIsAnalyzingFiles] = useState(false);
-  const [analysisResults, setAnalysisResults] = useState<string | null>(null);
+  const [analysisAbortController, setAnalysisAbortController] = useState<AbortController | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<Array<{
+    id: string;
+    fileName: string;
+    contenderName: string;
+    status: 'pending' | 'analyzing' | 'completed' | 'error';
+    data?: any;
+    rawJson?: string;
+    error?: string;
+  }>>([]);
   const [isAiAvailable, setIsAiAvailable] = useState(false);
 
   const [customInstructions, setCustomInstructions] = useState<string>('');
@@ -79,6 +91,14 @@ export default function ComparisonDetailPage() {
     }
   };
 
+  const handleCancelAnalysis = () => {
+    if (analysisAbortController) {
+      analysisAbortController.abort();
+      setAnalysisAbortController(null);
+    }
+    setIsAnalyzingFiles(false);
+  };
+
   const handleAnalyzeFiles = async () => {
     if (!aiService.isEnabled()) {
       alert('Please configure an AI model in AI Settings first.');
@@ -92,61 +112,122 @@ export default function ComparisonDetailPage() {
       return;
     }
 
+    // Create abort controller for cancellation
+    const abortController = new AbortController();
+    setAnalysisAbortController(abortController);
     setIsAnalyzingFiles(true);
-    setAnalysisResults(null);
+
+    // Collect all files to analyze
+    const filesToAnalyze: Array<{
+      id: string;
+      fileName: string;
+      contenderName: string;
+      fileData: string;
+      fileType: string;
+    }> = [];
+
+    contendersWithFiles.forEach(contender => {
+      contender.attachments?.forEach(file => {
+        filesToAnalyze.push({
+          id: `${contender.id}-${file.name}`,
+          fileName: file.name,
+          contenderName: contender.name,
+          fileData: file.data,
+          fileType: file.type
+        });
+      });
+    });
+
+    // Initialize analysis results with pending status
+    setAnalysisResults(filesToAnalyze.map(file => ({
+      id: file.id,
+      fileName: file.fileName,
+      contenderName: file.contenderName,
+      status: 'pending' as const
+    })));
 
     try {
-      // For testing: Use first contender and first file
-      const firstContender = contendersWithFiles[0];
-      const firstFile = firstContender.attachments[0];
-
-      console.log(`Analyzing file "${firstFile.name}" from contender "${firstContender.name}"`);
-      
-      // Send the file data as-is to the AI
-      const fileContent = firstFile.data;
-      
-      console.log('File details:', {
-        name: firstFile.name,
-        type: firstFile.type,
-        size: firstFile.size,
-        dataLength: firstFile.data.length
-      });
-
-      const analysisRequest = {
-        type: 'extract_properties' as const,
-        content: fileContent,
-        context: {
-          comparisonName: comparison?.name,
-          attachmentType: firstFile.type,
-          contenderName: firstContender.name,
-          customInstructions: customInstructions.trim() || undefined
+      // Process files sequentially
+      for (const file of filesToAnalyze) {
+        // Check if the request was aborted before processing each file
+        if (abortController.signal.aborted) {
+          return;
         }
-      };
 
-      console.log('=== FILE CONTENT ===');
-      console.log(fileContent);
-      console.log('=== ANALYSIS REQUEST ===');
-      console.log(analysisRequest);
+        // Update status to analyzing
+        setAnalysisResults(prev => prev.map(result => 
+          result.id === file.id 
+            ? { ...result, status: 'analyzing' as const }
+            : result
+        ));
 
-      const result = await aiService.analyze(analysisRequest);
-      
-      console.log('=== ANALYSIS RESULT ===');
-      console.log(result);
-      console.log('=== RAW RESPONSE ===');
-      if (result.success && result.data) {
-        console.log('Parsed data:', result.data);
+        try {
+          const analysisRequest = {
+            type: 'extract_properties' as const,
+            content: file.fileData,
+            context: {
+              comparisonName: comparison?.name,
+              attachmentType: file.fileType,
+              contenderName: file.contenderName,
+              customInstructions: customInstructions.trim() || undefined
+            }
+          };
+
+          console.log(`Analyzing file "${file.fileName}" from contender "${file.contenderName}"`);
+
+          const result = await aiService.analyze(analysisRequest);
+          
+          // Check if the request was aborted after analysis
+          if (abortController.signal.aborted) {
+            return;
+          }
+
+          if (result.success) {
+            setAnalysisResults(prev => prev.map(prevResult => 
+              prevResult.id === file.id 
+                ? { 
+                    ...prevResult, 
+                    status: 'completed' as const,
+                    data: result.data,
+                    rawJson: JSON.stringify(result.data, null, 2)
+                  }
+                : prevResult
+            ));
+          } else {
+            setAnalysisResults(prev => prev.map(prevResult => 
+              prevResult.id === file.id 
+                ? { 
+                    ...prevResult, 
+                    status: 'error' as const,
+                    error: result.error || 'Unknown error'
+                  }
+                : prevResult
+            ));
+          }
+        } catch (error) {
+          setAnalysisResults(prev => prev.map(prevResult => 
+            prevResult.id === file.id 
+              ? { 
+                  ...prevResult, 
+                  status: 'error' as const,
+                  error: error instanceof Error ? error.message : 'Unknown error'
+                }
+              : prevResult
+          ));
+        }
       }
-      
-      if (result.success) {
-        setAnalysisResults(JSON.stringify(result.data, null, 2));
-      } else {
-        setAnalysisResults(`Error: ${result.error}`);
-      }
+
     } catch (error) {
+      // Check if the error is due to abortion
+      if (abortController.signal.aborted) {
+        console.log('Analysis was cancelled');
+        return;
+      }
+      
       console.error('Analysis error:', error);
-      setAnalysisResults(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsAnalyzingFiles(false);
+      setAnalysisAbortController(null);
     }
   };
 
@@ -869,22 +950,46 @@ export default function ComparisonDetailPage() {
                   </p>
                 </div>
                 
+                <div className="bg-blue-900/20 border border-blue-800 rounded-md p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <span className="text-blue-400 text-lg">ℹ️</span>
+                    </div>
+                    <div>
+                      <h4 className="text-blue-400 font-medium mb-1">What does Analyse do?</h4>
+                      <p className="text-blue-200 text-sm">
+                        The AI will examine attached files and scrape related hyperlinks to automatically extract 
+                        configuration properties, technical specifications, and key values that can be used for 
+                        comparison. This saves you time by automatically populating property values from documents 
+                        like quotes, specifications, configuration files, and web pages.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex gap-2 mb-4">
-                  <button
-                    onClick={handleAnalyzeFiles}
-                    disabled={isAnalyzingFiles || !isAiAvailable}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-md transition-colors"
-                  >
-                    {isAnalyzingFiles ? 'Analyzing Files...' : 'Analyze Attachments'}
-                  </button>
+                  {isAnalyzingFiles ? (
+                    <button
+                      onClick={handleCancelAnalysis}
+                      className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleAnalyzeFiles}
+                      disabled={!isAiAvailable}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-md transition-colors"
+                    >
+                      Analyse
+                    </button>
+                  )}
                 </div>
                 
-                {analysisResults && (
-                  <div className="bg-gray-700 border border-gray-600 rounded-md p-4">
-                    <h4 className="font-medium text-gray-200 mb-2">Analysis Results:</h4>
-                    <pre className="text-sm text-gray-300 whitespace-pre-wrap overflow-auto max-h-64">
-                      {analysisResults}
-                    </pre>
+                {analysisResults.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium text-gray-200 mb-4">Analysis Results:</h4>
+                    <FileAnalysisList results={analysisResults} />
                   </div>
                 )}
               </div>
