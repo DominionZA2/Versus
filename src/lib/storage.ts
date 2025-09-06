@@ -41,6 +41,10 @@ export const storage = {
     localStorage.setItem(CONTENDERS_KEY, JSON.stringify(contenders));
   },
 
+  getComparison(id: string): Comparison | null {
+    return this.getComparisons().find(c => c.id === id) || null;
+  },
+
   getComparisonBySlug(slug: string): Comparison | null {
     return this.getComparisons().find(c => c.slug === slug) || null;
   },
