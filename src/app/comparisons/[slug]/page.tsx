@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Comparison, Contender, ComparisonProperty, AttachedFile } from '@/types';
+import { Comparison, Contender, ComparisonProperty, AttachedFile, Hyperlink } from '@/types';
 import AISettings from '@/components/AISettings';
 import { aiService } from '@/lib/ai-service';
 import { storage } from '@/lib/storage';
@@ -20,7 +20,7 @@ export default function ComparisonDetailPage() {
   const [isManagingAI, setIsManagingAI] = useState(false);
   const [isAnalyzingFiles, setIsAnalyzingFiles] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<string | null>(null);
-  const [customInstructions, setCustomInstructions] = useState<string>(`For tables or lists with product information:
+  const defaultInstructions = `For tables or lists with product information:
 - Combine code + description as property name (e.g., "ABC123 - Product Name")
 - Use net price, final price, or total as the value
 - For multiple columns, prioritize: Net Price > Total > Price > Amount
@@ -30,7 +30,9 @@ export default function ComparisonDetailPage() {
 For general documents:
 - Look for key-value pairs, specifications, or feature lists
 - Extract meaningful properties with their values
-- Convert text descriptions to structured data`);
+- Convert text descriptions to structured data`;
+
+  const [customInstructions, setCustomInstructions] = useState<string>('');
   const [editingProperty, setEditingProperty] = useState<string | null>(null);
   const [newProperty, setNewProperty] = useState({ 
     name: '', 
@@ -50,6 +52,7 @@ For general documents:
     description: '',
     pros: [''],
     cons: [''],
+    hyperlinks: [''],
     properties: {} as Record<string, string | number>,
     attachments: [] as AttachedFile[]
   });
@@ -58,6 +61,7 @@ For general documents:
     description: '',
     pros: [''],
     cons: [''],
+    hyperlinks: [''],
     properties: {} as Record<string, string | number>,
     attachments: [] as AttachedFile[]
   });
@@ -70,7 +74,11 @@ For general documents:
         setContenders(storage.getContenders(comp.id));
       }
     }
-  }, [slug]);
+
+    // Load custom instructions from localStorage
+    const savedInstructions = localStorage.getItem('ai_custom_instructions');
+    setCustomInstructions(savedInstructions || defaultInstructions);
+  }, [slug, defaultInstructions]);
 
   const handleAddContender = (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,12 +93,19 @@ For general documents:
       cons: newContender.cons.filter(c => c.trim()),
       properties: { ...newContender.properties },
       attachments: [...newContender.attachments],
+      hyperlinks: newContender.hyperlinks
+        .filter(url => url.trim())
+        .map(url => ({
+          id: storage.generateId(),
+          url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
+          addedAt: new Date().toISOString()
+        })),
       createdAt: new Date().toISOString()
     };
 
     storage.saveContender(contender);
     setContenders(storage.getContenders(comparison.id));
-    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
+    setNewContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
     setIsAddingContender(false);
   };
 
@@ -179,6 +194,7 @@ For general documents:
       description: contender.description || '',
       pros: [...contender.pros, ''], // Add empty string for new entries
       cons: [...contender.cons, ''], // Add empty string for new entries
+      hyperlinks: [...(contender.hyperlinks || []).map(h => h.url), ''], // Convert back to strings and add empty
       properties: { ...contender.properties },
       attachments: [...(contender.attachments || [])]
     });
@@ -198,18 +214,25 @@ For general documents:
       cons: editContender.cons.filter(c => c.trim()),
       properties: { ...editContender.properties },
       attachments: [...editContender.attachments],
+      hyperlinks: editContender.hyperlinks
+        .filter(url => url.trim())
+        .map(url => ({
+          id: storage.generateId(),
+          url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
+          addedAt: new Date().toISOString()
+        })),
       createdAt: existingContender?.createdAt || new Date().toISOString()
     };
 
     storage.saveContender(updatedContender);
     setContenders(storage.getContenders(comparison.id));
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
   };
 
   const handleCancelEdit = () => {
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
+    setEditContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
   };
 
   const handleAddProperty = () => {
@@ -416,42 +439,42 @@ For general documents:
     }
   };
 
-  const updateNewContenderArray = (type: 'pros' | 'cons', index: number, value: string) => {
+  const updateNewContenderArray = (type: 'pros' | 'cons' | 'hyperlinks', index: number, value: string) => {
     setNewContender(prev => ({
       ...prev,
       [type]: prev[type].map((item, i) => i === index ? value : item)
     }));
   };
 
-  const addNewItem = (type: 'pros' | 'cons') => {
+  const addNewItem = (type: 'pros' | 'cons' | 'hyperlinks') => {
     setNewContender(prev => ({
       ...prev,
       [type]: [...prev[type], '']
     }));
   };
 
-  const removeItem = (type: 'pros' | 'cons', index: number) => {
+  const removeItem = (type: 'pros' | 'cons' | 'hyperlinks', index: number) => {
     setNewContender(prev => ({
       ...prev,
       [type]: prev[type].filter((_, i) => i !== index)
     }));
   };
 
-  const updateEditContenderArray = (type: 'pros' | 'cons', index: number, value: string) => {
+  const updateEditContenderArray = (type: 'pros' | 'cons' | 'hyperlinks', index: number, value: string) => {
     setEditContender(prev => ({
       ...prev,
       [type]: prev[type].map((item, i) => i === index ? value : item)
     }));
   };
 
-  const addEditItem = (type: 'pros' | 'cons') => {
+  const addEditItem = (type: 'pros' | 'cons' | 'hyperlinks') => {
     setEditContender(prev => ({
       ...prev,
       [type]: [...prev[type], '']
     }));
   };
 
-  const removeEditItem = (type: 'pros' | 'cons', index: number) => {
+  const removeEditItem = (type: 'pros' | 'cons' | 'hyperlinks', index: number) => {
     setEditContender(prev => ({
       ...prev,
       [type]: prev[type].filter((_, i) => i !== index)
@@ -1152,6 +1175,39 @@ For general documents:
                 </div>
               </div>
 
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hyperlinks
+                </label>
+                {newContender.hyperlinks.map((link, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={link}
+                      onChange={(e) => updateNewContenderArray('hyperlinks', index, e.target.value)}
+                      placeholder="Enter a URL (e.g., https://example.com)"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {newContender.hyperlinks.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeItem('hyperlinks', index)}
+                        className="text-red-600 hover:text-red-800 px-2"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addNewItem('hyperlinks')}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  + Add Hyperlink
+                </button>
+              </div>
+
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1352,6 +1408,39 @@ For general documents:
                       </div>
                     </div>
 
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hyperlinks
+                      </label>
+                      {editContender.hyperlinks.map((link, index) => (
+                        <div key={index} className="flex gap-2 mb-2">
+                          <input
+                            type="text"
+                            value={link}
+                            onChange={(e) => updateEditContenderArray('hyperlinks', index, e.target.value)}
+                            placeholder="Enter a URL (e.g., https://example.com)"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          {editContender.hyperlinks.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeEditItem('hyperlinks', index)}
+                              className="text-red-600 hover:text-red-800 px-2"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addEditItem('hyperlinks')}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        + Add Hyperlink
+                      </button>
+                    </div>
+
                     <div className="space-y-4 mb-4">
                       <div>
                         <label className="block text-sm font-medium text-green-700 mb-2">
@@ -1514,6 +1603,26 @@ For general documents:
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-gray-600">Attachments:</span>
                           <span className="font-medium">{contender.attachments.length}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {contender.hyperlinks && contender.hyperlinks.length > 0 && (
+                      <div className="mb-4 pt-3 border-t border-gray-200">
+                        <h4 className="font-medium text-gray-700 mb-2">Links</h4>
+                        <div className="space-y-1">
+                          {contender.hyperlinks.map((hyperlink) => (
+                            <div key={hyperlink.id}>
+                              <a
+                                href={hyperlink.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                              >
+                                {hyperlink.url}
+                              </a>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}

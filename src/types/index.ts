@@ -22,6 +22,12 @@ export interface AttachedFile {
   uploadedAt: string;
 }
 
+export interface Hyperlink {
+  id: string;
+  url: string;
+  addedAt: string;
+}
+
 export interface Contender {
   id: string;
   comparisonId: string;
@@ -31,6 +37,7 @@ export interface Contender {
   cons: string[];
   properties: Record<string, string | number>; // key -> value mapping
   attachments: AttachedFile[];
+  hyperlinks: Hyperlink[];
   score?: number;
   createdAt: string;
 }
