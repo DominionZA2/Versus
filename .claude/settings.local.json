@@ -26,7 +26,8 @@
       "Bash(\"taskkill\" \"/F\" \"/PID\" \"29340\")",
       "Bash(cmd /c:*)",
       "Bash(powershell:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebFetch(domain:docs.anthropic.com)"
     ],
     "deny": []
   }

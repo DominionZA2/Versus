@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Comparison, Contender, ComparisonProperty, AttachedFile } from '@/types';
+import AISettings from '@/components/AISettings';
+import { aiService } from '@/lib/ai-service';
 import { storage } from '@/lib/storage';
 
 export default function ComparisonDetailPage() {
@@ -15,6 +17,7 @@ export default function ComparisonDetailPage() {
   const [isAddingContender, setIsAddingContender] = useState(false);
   const [editingContender, setEditingContender] = useState<string | null>(null);
   const [isManagingProperties, setIsManagingProperties] = useState(false);
+  const [isManagingAI, setIsManagingAI] = useState(false);
   const [editingProperty, setEditingProperty] = useState<string | null>(null);
   const [newProperty, setNewProperty] = useState({ 
     name: '', 
@@ -662,6 +665,12 @@ export default function ComparisonDetailPage() {
                 Manage Properties
               </button>
               <button
+                onClick={() => setIsManagingAI(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+              >
+                AI Settings
+              </button>
+              <button
                 onClick={() => setIsAddingContender(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
               >
@@ -670,6 +679,12 @@ export default function ComparisonDetailPage() {
             </div>
           </div>
         </div>
+
+        {isManagingAI && (
+          <div className="mb-6">
+            <AISettings onClose={() => setIsManagingAI(false)} />
+          </div>
+        )}
 
         {isManagingProperties && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
