@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Comparison, Contender, ComparisonProperty, AttachedFile, Hyperlink } from '@/types';
 import { aiService } from '@/lib/ai-service';
 import { storage } from '@/lib/storage';
+import ContenderForm from '@/components/ContenderForm';
 
 export default function ComparisonDetailPage() {
   const params = useParams();
@@ -46,24 +47,6 @@ For general documents:
   const [newPropertyError, setNewPropertyError] = useState('');
   const [editPropertyError, setEditPropertyError] = useState('');
   const [draggedProperty, setDraggedProperty] = useState<string | null>(null);
-  const [newContender, setNewContender] = useState({
-    name: '',
-    description: '',
-    pros: [''],
-    cons: [''],
-    hyperlinks: [''],
-    properties: {} as Record<string, string | number>,
-    attachments: [] as AttachedFile[]
-  });
-  const [editContender, setEditContender] = useState({
-    name: '',
-    description: '',
-    pros: [''],
-    cons: [''],
-    hyperlinks: [''],
-    properties: {} as Record<string, string | number>,
-    attachments: [] as AttachedFile[]
-  });
 
   useEffect(() => {
     if (slug) {
@@ -79,32 +62,10 @@ For general documents:
     setCustomInstructions(savedInstructions || defaultInstructions);
   }, [slug, defaultInstructions]);
 
-  const handleAddContender = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comparison || !newContender.name.trim()) return;
-
-    const contender: Contender = {
-      id: storage.generateId(),
-      comparisonId: comparison.id,
-      name: newContender.name.trim(),
-      description: newContender.description.trim() || undefined,
-      pros: newContender.pros.filter(p => p.trim()),
-      cons: newContender.cons.filter(c => c.trim()),
-      properties: { ...newContender.properties },
-      attachments: [...newContender.attachments],
-      hyperlinks: newContender.hyperlinks
-        .filter(url => url.trim())
-        .map(url => ({
-          id: storage.generateId(),
-          url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
-          addedAt: new Date().toISOString()
-        })),
-      createdAt: new Date().toISOString()
-    };
-
+  const handleAddContender = (contender: Contender) => {
+    if (!comparison) return;
     storage.saveContender(contender);
     setContenders(storage.getContenders(comparison.id));
-    setNewContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
     setIsAddingContender(false);
   };
 
@@ -188,50 +149,17 @@ For general documents:
 
   const handleEditContender = (contender: Contender) => {
     setEditingContender(contender.id);
-    setEditContender({
-      name: contender.name,
-      description: contender.description || '',
-      pros: [...contender.pros, ''], // Add empty string for new entries
-      cons: [...contender.cons, ''], // Add empty string for new entries
-      hyperlinks: [...(contender.hyperlinks || []).map(h => h.url), ''], // Convert back to strings and add empty
-      properties: { ...contender.properties },
-      attachments: [...(contender.attachments || [])]
-    });
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!comparison || !editingContender || !editContender.name.trim()) return;
-
-    const existingContender = contenders.find(c => c.id === editingContender);
-    const updatedContender: Contender = {
-      id: editingContender,
-      comparisonId: comparison.id,
-      name: editContender.name.trim(),
-      description: editContender.description.trim() || undefined,
-      pros: editContender.pros.filter(p => p.trim()),
-      cons: editContender.cons.filter(c => c.trim()),
-      properties: { ...editContender.properties },
-      attachments: [...editContender.attachments],
-      hyperlinks: editContender.hyperlinks
-        .filter(url => url.trim())
-        .map(url => ({
-          id: storage.generateId(),
-          url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
-          addedAt: new Date().toISOString()
-        })),
-      createdAt: existingContender?.createdAt || new Date().toISOString()
-    };
-
-    storage.saveContender(updatedContender);
+  const handleSaveEdit = (contender: Contender) => {
+    if (!comparison) return;
+    storage.saveContender(contender);
     setContenders(storage.getContenders(comparison.id));
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
   };
 
   const handleCancelEdit = () => {
     setEditingContender(null);
-    setEditContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
   };
 
   const handleAddProperty = () => {
@@ -438,47 +366,6 @@ For general documents:
     }
   };
 
-  const updateNewContenderArray = (type: 'pros' | 'cons' | 'hyperlinks', index: number, value: string) => {
-    setNewContender(prev => ({
-      ...prev,
-      [type]: prev[type].map((item, i) => i === index ? value : item)
-    }));
-  };
-
-  const addNewItem = (type: 'pros' | 'cons' | 'hyperlinks') => {
-    setNewContender(prev => ({
-      ...prev,
-      [type]: [...prev[type], '']
-    }));
-  };
-
-  const removeItem = (type: 'pros' | 'cons' | 'hyperlinks', index: number) => {
-    setNewContender(prev => ({
-      ...prev,
-      [type]: prev[type].filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateEditContenderArray = (type: 'pros' | 'cons' | 'hyperlinks', index: number, value: string) => {
-    setEditContender(prev => ({
-      ...prev,
-      [type]: prev[type].map((item, i) => i === index ? value : item)
-    }));
-  };
-
-  const addEditItem = (type: 'pros' | 'cons' | 'hyperlinks') => {
-    setEditContender(prev => ({
-      ...prev,
-      [type]: [...prev[type], '']
-    }));
-  };
-
-  const removeEditItem = (type: 'pros' | 'cons' | 'hyperlinks', index: number) => {
-    setEditContender(prev => ({
-      ...prev,
-      [type]: prev[type].filter((_, i) => i !== index)
-    }));
-  };
 
   const getBestPropertyValues = () => {
     const bestValues: Record<string, number | string> = {};
@@ -532,86 +419,6 @@ For general documents:
     return bestValues;
   };
 
-  const handleFileUpload = async (file: File, isEdit = false) => {
-    return new Promise<AttachedFile>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const attachedFile: AttachedFile = {
-          id: storage.generateId(),
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          data: reader.result as string,
-          uploadedAt: new Date().toISOString()
-        };
-        resolve(attachedFile);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const processFile = async (file: File, isEdit = false) => {
-    // Check file size (limit to 5MB to avoid localStorage issues)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
-      return;
-    }
-
-    try {
-      const attachedFile = await handleFileUpload(file);
-      
-      if (isEdit) {
-        setEditContender(prev => ({
-          ...prev,
-          attachments: [...prev.attachments, attachedFile]
-        }));
-      } else {
-        setNewContender(prev => ({
-          ...prev,
-          attachments: [...prev.attachments, attachedFile]
-        }));
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Error uploading file. Please try again.');
-    }
-  };
-
-  const handleAddFile = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    await processFile(file, isEdit);
-    
-    // Clear the input
-    e.target.value = '';
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = async (e: React.DragEvent, isEdit = false) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      await processFile(files[0], isEdit);
-    }
-  };
 
   const handleDropOnCard = async (e: React.DragEvent, contenderId: string) => {
     e.preventDefault();
@@ -629,7 +436,21 @@ For general documents:
     }
 
     try {
-      const attachedFile = await handleFileUpload(file);
+      const reader = new FileReader();
+      const attachedFile = await new Promise<AttachedFile>((resolve, reject) => {
+        reader.onload = () => {
+          resolve({
+            id: storage.generateId(),
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data: reader.result as string,
+            uploadedAt: new Date().toISOString()
+          });
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
       // Find the contender and update it
       const contender = contenders.find(c => c.id === contenderId);
@@ -648,20 +469,6 @@ For general documents:
     }
   };
 
-  const handleRemoveFile = (fileId: string, isEdit = false) => {
-    if (isEdit) {
-      setEditContender(prev => ({
-        ...prev,
-        attachments: prev.attachments.filter(f => f.id !== fileId)
-      }));
-    } else {
-      setNewContender(prev => ({
-        ...prev,
-        attachments: prev.attachments.filter(f => f.id !== fileId)
-      }));
-    }
-  };
-
   const handleDownloadFile = (file: AttachedFile) => {
     const link = document.createElement('a');
     link.href = file.data;
@@ -671,75 +478,6 @@ For general documents:
     document.body.removeChild(link);
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const renderPropertyInput = (
-    property: ComparisonProperty,
-    value: string | number | undefined,
-    onChange: (key: string, value: string | number) => void
-  ) => {
-    const currentValue = value !== undefined ? value : '';
-
-    switch (property.type) {
-      case 'text':
-        return (
-          <input
-            type="text"
-            value={currentValue}
-            onChange={(e) => onChange(property.key, e.target.value)}
-            placeholder={`Enter ${property.name.toLowerCase()}`}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        );
-      case 'number':
-        return (
-          <input
-            type="number"
-            value={currentValue}
-            onChange={(e) => onChange(property.key, parseFloat(e.target.value) || 0)}
-            placeholder={`Enter ${property.name.toLowerCase()}`}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        );
-      case 'rating':
-        return (
-          <div className="flex gap-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                onClick={() => onChange(property.key, star)}
-                className={`text-2xl ${
-                  (currentValue as number) >= star ? 'text-yellow-400' : 'text-gray-300'
-                } hover:text-yellow-400 transition-colors`}
-              >
-                ★
-              </button>
-            ))}
-            <span className="ml-2 text-sm text-gray-600">
-              {currentValue ? `${currentValue}/5` : 'Not rated'}
-            </span>
-          </div>
-        );
-      case 'datetime':
-        return (
-          <input
-            type="datetime-local"
-            value={currentValue ? new Date(currentValue as string).toISOString().slice(0, 16) : ''}
-            onChange={(e) => onChange(property.key, e.target.value ? new Date(e.target.value).toISOString() : '')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        );
-      default:
-        return null;
-    }
-  };
 
   if (!comparison) {
     return (
@@ -1102,222 +840,22 @@ For general documents:
         )}
 
         {isAddingContender && (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
-            <form onSubmit={handleAddContender}>
-              <h2 className="text-xl font-semibold text-gray-100 mb-4">Add New Contender</h2>
-              
-              <div className="mb-4">
-                <label htmlFor="contender-name" className="block text-sm font-medium text-gray-300 mb-2">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  id="contender-name"
-                  value={newContender.name}
-                  onChange={(e) => setNewContender(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Contender name"
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                />
-              </div>
+          <ContenderForm
+            comparison={comparison}
+            mode="add"
+            onSubmit={handleAddContender}
+            onCancel={() => setIsAddingContender(false)}
+          />
+        )}
 
-              <div className="mb-4">
-                <label htmlFor="contender-description" className="block text-sm font-medium text-gray-300 mb-2">
-                  Description (optional)
-                </label>
-                <textarea
-                  id="contender-description"
-                  value={newContender.description}
-                  onChange={(e) => setNewContender(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of this contender"
-                  rows={2}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {comparison.properties.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-medium text-gray-200 mb-3">Properties</h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {comparison.properties.map((property) => (
-                      <div key={property.key}>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          {property.name} ({property.type})
-                        </label>
-                        {renderPropertyInput(
-                          property,
-                          newContender.properties[property.key],
-                          (key, value) => setNewContender(prev => ({
-                            ...prev,
-                            properties: { ...prev.properties, [key]: value }
-                          }))
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-gray-200 mb-3">File Attachments</h3>
-                <div 
-                  className="border border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors"
-                  onDragOver={handleDragOver}
-                  onDragEnter={handleDragEnter}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, false)}
-                >
-                  <input
-                    type="file"
-                    onChange={(e) => handleAddFile(e, false)}
-                    className="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  <p className="text-sm text-gray-500 mb-3">Drag & drop a file here or click to browse • Maximum file size: 5MB</p>
-                  
-                  {newContender.attachments.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-sm text-gray-700">Attached Files:</h4>
-                      {newContender.attachments.map((file) => (
-                        <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium">{file.name}</span>
-                            <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFile(file.id, false)}
-                            className="text-red-600 hover:text-red-800 text-sm"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Hyperlinks
-                </label>
-                {newContender.hyperlinks.map((link, index) => (
-                  <div key={index} className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={link}
-                      onChange={(e) => updateNewContenderArray('hyperlinks', index, e.target.value)}
-                      placeholder="Enter a URL (e.g., https://example.com)"
-                      className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    {newContender.hyperlinks.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItem('hyperlinks', index)}
-                        className="text-red-600 hover:text-red-800 px-2"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addNewItem('hyperlinks')}
-                  className="text-blue-600 hover:text-blue-800 text-sm"
-                >
-                  + Add Hyperlink
-                </button>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Pros
-                  </label>
-                  {newContender.pros.map((pro, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={pro}
-                        onChange={(e) => updateNewContenderArray('pros', index, e.target.value)}
-                        placeholder="Enter a pro"
-                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                      {newContender.pros.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem('pros', index)}
-                          className="text-red-600 hover:text-red-800 px-2"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => addNewItem('pros')}
-                    className="text-green-600 hover:text-green-800 text-sm"
-                  >
-                    + Add Pro
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Cons
-                  </label>
-                  {newContender.cons.map((con, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={con}
-                        onChange={(e) => updateNewContenderArray('cons', index, e.target.value)}
-                        placeholder="Enter a con"
-                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                      />
-                      {newContender.cons.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeItem('cons', index)}
-                          className="text-red-600 hover:text-red-800 px-2"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => addNewItem('cons')}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    + Add Con
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
-                >
-                  Add Contender
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddingContender(false);
-                    setNewContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
-                  }}
-                  className="bg-gray-600 hover:bg-gray-500 text-gray-100 font-semibold px-4 py-2 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
+        {editingContender && (
+          <ContenderForm
+            comparison={comparison}
+            mode="edit"
+            existingContender={contenders.find(c => c.id === editingContender)}
+            onSubmit={handleSaveEdit}
+            onCancel={handleCancelEdit}
+          />
         )}
 
         {contenders.length === 0 ? (
@@ -1327,229 +865,16 @@ For general documents:
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {contenders.map((contender) => (
+            {contenders.filter(c => editingContender !== c.id).map((contender) => (
               <div 
                 key={contender.id} 
-                className={`bg-gray-800 border border-gray-700 rounded-lg p-6 ${
-                  editingContender !== contender.id 
-                    ? 'hover:shadow-lg transition-all duration-200 hover:border-blue-500' 
-                    : ''
-                }`}
-                onDragOver={editingContender !== contender.id ? handleDragOver : undefined}
-                onDragEnter={editingContender !== contender.id ? handleDragEnter : undefined}
-                onDragLeave={editingContender !== contender.id ? handleDragLeave : undefined}
-                onDrop={editingContender !== contender.id ? (e) => handleDropOnCard(e, contender.id) : undefined}
+                className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:shadow-lg transition-all duration-200 hover:border-blue-500"
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => handleDropOnCard(e, contender.id)}
               >
-                {editingContender === contender.id ? (
-                  <form onSubmit={handleSaveEdit}>
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        value={editContender.name}
-                        onChange={(e) => setEditContender(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        autoFocus
-                      />
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Description (optional)
-                      </label>
-                      <textarea
-                        value={editContender.description}
-                        onChange={(e) => setEditContender(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Brief description of this contender"
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    {comparison.properties.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium mb-3">Properties</h4>
-                        <div className="grid gap-4">
-                          {comparison.properties.map((property) => (
-                            <div key={property.key}>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                {property.name} ({property.type})
-                              </label>
-                              {renderPropertyInput(
-                                property,
-                                editContender.properties[property.key],
-                                (key, value) => setEditContender(prev => ({
-                                  ...prev,
-                                  properties: { ...prev.properties, [key]: value }
-                                }))
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mb-4">
-                      <h4 className="font-medium mb-3">File Attachments</h4>
-                      <div 
-                        className="border border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors"
-                        onDragOver={handleDragOver}
-                        onDragEnter={handleDragEnter}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, true)}
-                      >
-                        <input
-                          type="file"
-                          onChange={(e) => handleAddFile(e, true)}
-                          className="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-                        <p className="text-sm text-gray-500 mb-3">Drag & drop a file here or click to browse • Maximum file size: 5MB</p>
-                        
-                        {editContender.attachments.length > 0 && (
-                          <div className="space-y-2">
-                            <h5 className="font-medium text-sm text-gray-700">Attached Files:</h5>
-                            {editContender.attachments.map((file) => (
-                              <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-sm font-medium">{file.name}</span>
-                                  <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveFile(file.id, true)}
-                                  className="text-red-600 hover:text-red-800 text-sm"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hyperlinks
-                      </label>
-                      {editContender.hyperlinks.map((link, index) => (
-                        <div key={index} className="flex gap-2 mb-2">
-                          <input
-                            type="text"
-                            value={link}
-                            onChange={(e) => updateEditContenderArray('hyperlinks', index, e.target.value)}
-                            placeholder="Enter a URL (e.g., https://example.com)"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          {editContender.hyperlinks.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeEditItem('hyperlinks', index)}
-                              className="text-red-600 hover:text-red-800 px-2"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addEditItem('hyperlinks')}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
-                      >
-                        + Add Hyperlink
-                      </button>
-                    </div>
-
-                    <div className="space-y-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-green-700 mb-2">
-                          Pros
-                        </label>
-                        {editContender.pros.map((pro, index) => (
-                          <div key={index} className="flex gap-2 mb-2">
-                            <input
-                              type="text"
-                              value={pro}
-                              onChange={(e) => updateEditContenderArray('pros', index, e.target.value)}
-                              placeholder="Enter a pro"
-                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                            />
-                            {editContender.pros.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeEditItem('pros', index)}
-                                className="text-red-600 hover:text-red-800 px-2"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addEditItem('pros')}
-                          className="text-green-600 hover:text-green-800 text-sm"
-                        >
-                          + Add Pro
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-red-700 mb-2">
-                          Cons
-                        </label>
-                        {editContender.cons.map((con, index) => (
-                          <div key={index} className="flex gap-2 mb-2">
-                            <input
-                              type="text"
-                              value={con}
-                              onChange={(e) => updateEditContenderArray('cons', index, e.target.value)}
-                              placeholder="Enter a con"
-                              className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-                            />
-                            {editContender.cons.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeEditItem('cons', index)}
-                                className="text-red-600 hover:text-red-800 px-2"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addEditItem('cons')}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          + Add Con
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 text-sm rounded transition-colors"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-3 py-1 text-sm rounded transition-colors"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-4">
                       <h3 
                         className="text-xl font-semibold text-blue-400 hover:text-blue-300 cursor-pointer"
                         onClick={() => handleEditContender(contender)}
@@ -1680,8 +1005,6 @@ For general documents:
                         )}
                       </div>
                     )}
-                  </>
-                )}
               </div>
             ))}
           </div>
