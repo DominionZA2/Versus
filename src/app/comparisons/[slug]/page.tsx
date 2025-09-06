@@ -496,11 +496,8 @@ For general documents:
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
-          <Link href="/comparisons" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
-            ← Back to Comparisons
-          </Link>
           <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">{comparison.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-100">{comparison.name}</h1>
             <div className="flex gap-3">
               <button
                 onClick={() => setIsManagingProperties(true)}
@@ -522,17 +519,17 @@ For general documents:
 
 
         {isManagingProperties && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Manage Comparison Properties</h2>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold text-gray-100 mb-4">Manage Comparison Properties</h2>
             
             {/* Tab Navigation */}
-            <div className="flex border-b border-gray-200 mb-6">
+            <div className="flex border-b border-gray-600 mb-6">
               <button
                 onClick={() => setActivePropertiesTab('properties')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                   activePropertiesTab === 'properties' 
-                    ? 'border-blue-500 text-blue-600' 
-                    : 'border-transparent text-gray-600 hover:text-gray-800'
+                    ? 'border-blue-500 text-blue-400' 
+                    : 'border-transparent text-gray-400 hover:text-gray-200'
                 }`}
               >
                 Properties
@@ -542,8 +539,8 @@ For general documents:
                   onClick={() => setActivePropertiesTab('ai-analysis')}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ml-4 ${
                     activePropertiesTab === 'ai-analysis' 
-                      ? 'border-blue-500 text-blue-600' 
-                      : 'border-transparent text-gray-600 hover:text-gray-800'
+                      ? 'border-blue-500 text-blue-400' 
+                      : 'border-transparent text-gray-400 hover:text-gray-200'
                   }`}
                 >
                   AI Analysis
@@ -554,23 +551,23 @@ For general documents:
             {/* Properties Tab Content */}
             {activePropertiesTab === 'properties' && (
               <div>
-                <p className="text-gray-600 text-sm mb-4">
+                <p className="text-gray-400 text-sm mb-4">
                   Properties are criteria that each contender can be evaluated on (e.g., Price, Quality, Features).
                   <br />
-                  <span className="text-blue-600">Drag the ⋮⋮ icon to reorder properties.</span>
+                  <span className="text-blue-400">Drag the ⋮⋮ icon to reorder properties.</span>
                 </p>
 
             {comparison.properties.length > 0 && (
               <div className="mb-6">
-                <h3 className="text-lg font-medium mb-3">Current Properties</h3>
+                <h3 className="text-lg font-medium text-gray-200 mb-3">Current Properties</h3>
                 <div className="space-y-2">
                   {comparison.properties.map((property, index) => (
                     <div 
                       key={property.key} 
-                      className={`p-3 bg-gray-50 rounded-md transition-all duration-200 ${
+                      className={`p-3 bg-gray-700 border border-gray-600 rounded-md transition-all duration-200 ${
                         draggedProperty === property.key ? 'opacity-50 scale-95' : ''
                       } ${
-                        draggedProperty && draggedProperty !== property.key ? 'border-2 border-dashed border-blue-300' : ''
+                        draggedProperty && draggedProperty !== property.key ? 'border-2 border-dashed border-blue-400' : ''
                       }`}
                       draggable={editingProperty !== property.key}
                       onDragStart={(e) => handlePropertyDragStart(e, property.key)}
@@ -582,7 +579,7 @@ For general documents:
                         <div className="space-y-3">
                           <div className="flex gap-3 items-end">
                             <div className="flex-1">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-300 mb-1">
                                 Property Name
                               </label>
                               <input
@@ -592,10 +589,10 @@ For general documents:
                                   setEditProperty(prev => ({ ...prev, name: e.target.value }));
                                   if (editPropertyError) setEditPropertyError(''); // Clear error when user starts typing
                                 }}
-                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                                className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 focus:outline-none focus:ring-2 ${
                                   editPropertyError 
                                     ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                                    : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                    : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
                                 }`}
                               />
                               {editPropertyError && (
@@ -603,13 +600,13 @@ For general documents:
                               )}
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                              <label className="block text-sm font-medium text-gray-300 mb-1">
                                 Type
                               </label>
                               <select
                                 value={editProperty.type}
                                 onChange={(e) => setEditProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
-                                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                               >
                                 <option value="text">Text</option>
                                 <option value="number">Number</option>
@@ -620,8 +617,8 @@ For general documents:
                           </div>
                           
                           {(editProperty.type === 'number' || editProperty.type === 'rating' || editProperty.type === 'datetime') && (
-                            <div className="flex items-center space-x-4 p-3 bg-blue-50 rounded-md">
-                              <label className="block text-sm font-medium text-gray-700">
+                            <div className="flex items-center space-x-4 p-3 bg-gray-600 rounded-md">
+                              <label className="block text-sm font-medium text-gray-300">
                                 Comparison Direction:
                               </label>
                               <label className="flex items-center">
@@ -632,8 +629,8 @@ For general documents:
                                   onChange={() => setEditProperty(prev => ({ ...prev, higherIsBetter: true }))}
                                   className="mr-2"
                                 />
-                                <span className="text-sm">Higher is better</span>
-                                <span className="ml-1 text-xs text-gray-500">(Quality, Rating)</span>
+                                <span className="text-sm text-gray-100">Higher is better</span>
+                                <span className="ml-1 text-xs text-gray-400">(Quality, Rating)</span>
                               </label>
                               <label className="flex items-center">
                                 <input
@@ -643,8 +640,8 @@ For general documents:
                                   onChange={() => setEditProperty(prev => ({ ...prev, higherIsBetter: false }))}
                                   className="mr-2"
                                 />
-                                <span className="text-sm">Lower is better</span>
-                                <span className="ml-1 text-xs text-gray-500">(Price, Time)</span>
+                                <span className="text-sm text-gray-100">Lower is better</span>
+                                <span className="ml-1 text-xs text-gray-400">(Price, Time)</span>
                               </label>
                             </div>
                           )}
@@ -700,12 +697,12 @@ For general documents:
               </div>
             )}
 
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-medium mb-3">Add New Property</h3>
+            <div className="border-t border-gray-600 pt-4">
+              <h3 className="text-lg font-medium text-gray-200 mb-3">Add New Property</h3>
               <div className="space-y-4">
                 <div className="flex gap-3 items-end">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Property Name
                     </label>
                     <input
@@ -716,10 +713,10 @@ For general documents:
                         if (newPropertyError) setNewPropertyError(''); // Clear error when user starts typing
                       }}
                       placeholder="e.g., Price, Quality, Ease of Use"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                      className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 ${
                         newPropertyError 
                           ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                          : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
                       }`}
                     />
                     {newPropertyError && (
@@ -727,13 +724,13 @@ For general documents:
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
                       Type
                     </label>
                     <select
                       value={newProperty.type}
                       onChange={(e) => setNewProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
-                      className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="text">Text</option>
                       <option value="number">Number</option>
@@ -750,8 +747,8 @@ For general documents:
                 </div>
                 
                 {(newProperty.type === 'number' || newProperty.type === 'rating' || newProperty.type === 'datetime') && (
-                  <div className="flex items-center space-x-4 p-3 bg-blue-50 rounded-md">
-                    <label className="block text-sm font-medium text-gray-700">
+                  <div className="flex items-center space-x-4 p-3 bg-gray-600 rounded-md">
+                    <label className="block text-sm font-medium text-gray-300">
                       Comparison Direction:
                     </label>
                     <label className="flex items-center">
@@ -762,8 +759,8 @@ For general documents:
                         onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: true }))}
                         className="mr-2"
                       />
-                      <span className="text-sm">Higher is better</span>
-                      <span className="ml-1 text-xs text-gray-500">(Quality, Rating)</span>
+                      <span className="text-sm text-gray-100">Higher is better</span>
+                      <span className="ml-1 text-xs text-gray-400">(Quality, Rating)</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -773,8 +770,8 @@ For general documents:
                         onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: false }))}
                         className="mr-2"
                       />
-                      <span className="text-sm">Lower is better</span>
-                      <span className="ml-1 text-xs text-gray-500">(Price, Time)</span>
+                      <span className="text-sm text-gray-100">Lower is better</span>
+                      <span className="ml-1 text-xs text-gray-400">(Price, Time)</span>
                     </label>
                   </div>
                 )}
@@ -786,13 +783,13 @@ For general documents:
             {/* AI Analysis Tab Content */}
             {activePropertiesTab === 'ai-analysis' && (
               <div>
-                <p className="text-gray-600 text-sm mb-4">
+                <p className="text-gray-400 text-sm mb-4">
                   Analyze attached files to automatically extract properties and values for comparison.
                 </p>
                 
                 {/* Custom Instructions */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Parsing Instructions
                   </label>
                   <textarea
@@ -802,10 +799,10 @@ For general documents:
                       localStorage.setItem('ai_custom_instructions', e.target.value);
                     }}
                     placeholder="Describe how to extract properties from your files..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     rows={6}
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-gray-400">
                     Customize how the AI should extract properties and values from your files. The AI will always return JSON format.
                   </p>
                 </div>
@@ -820,9 +817,9 @@ For general documents:
                   </button>
                 </div>
                 {analysisResults && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                    <h4 className="font-medium text-gray-700 mb-2">Analysis Results:</h4>
-                    <pre className="text-sm text-gray-600 whitespace-pre-wrap overflow-auto max-h-64">
+                  <div className="bg-gray-700 border border-gray-600 rounded-md p-4">
+                    <h4 className="font-medium text-gray-200 mb-2">Analysis Results:</h4>
+                    <pre className="text-sm text-gray-300 whitespace-pre-wrap overflow-auto max-h-64">
                       {analysisResults}
                     </pre>
                   </div>
@@ -833,7 +830,7 @@ For general documents:
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setIsManagingProperties(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-md transition-colors"
+                className="bg-gray-600 hover:bg-gray-500 text-gray-100 font-semibold px-4 py-2 rounded-md transition-colors"
               >
                 Done
               </button>
@@ -891,15 +888,9 @@ For general documents:
                       </button>
                     </div>
 
-                    {contender.description && (
-                      <div className="mb-4">
-                        <p className="text-gray-400 text-sm italic">{contender.description}</p>
-                      </div>
-                    )}
 
                     {comparison.properties.length > 0 && Object.keys(contender.properties).length > 0 && (
                       <div className="mb-4">
-                        <h4 className="font-medium text-gray-200 mb-2">Properties</h4>
                         <div className="space-y-2">
                           {comparison.properties.map((property) => {
                             const value = contender.properties[property.key];

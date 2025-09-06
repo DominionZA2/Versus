@@ -262,37 +262,26 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
           />
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="contender-description" className="block text-sm font-medium text-gray-300 mb-2">
-            Description (optional)
-          </label>
-          <textarea
-            id="contender-description"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Brief description of this contender"
-            rows={2}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
 
         {comparison.properties.length > 0 && (
           <div className="mb-6">
             <h3 className="text-lg font-medium text-gray-200 mb-3">Properties</h3>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
               {comparison.properties.map((property) => (
-                <div key={property.key}>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {property.name} ({property.type})
+                <div key={property.key} className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-gray-300 min-w-0 flex-shrink-0 w-32">
+                    {property.name}:
                   </label>
-                  {renderPropertyInput(
-                    property,
-                    formData.properties[property.key],
-                    (key, value) => setFormData(prev => ({
-                      ...prev,
-                      properties: { ...prev.properties, [key]: value }
-                    }))
-                  )}
+                  <div className="flex-1">
+                    {renderPropertyInput(
+                      property,
+                      formData.properties[property.key],
+                      (key, value) => setFormData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, [key]: value }
+                      }))
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -302,7 +291,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
         <div className="mb-6">
           <h3 className="text-lg font-medium text-gray-200 mb-3">File Attachments</h3>
           <div 
-            className="border border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors"
+            className="border border-dashed border-gray-600 rounded-lg p-4 hover:border-blue-400 hover:bg-gray-700 transition-colors"
             onDragOver={handleDragOver}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -311,23 +300,23 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
             <input
               type="file"
               onChange={handleAddFile}
-              className="mb-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="mb-3 block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500"
             />
-            <p className="text-sm text-gray-500 mb-3">Drag & drop a file here or click to browse • Maximum file size: 5MB</p>
+            <p className="text-sm text-gray-400 mb-3">Drag & drop a file here or click to browse • Maximum file size: 5MB</p>
             
             {formData.attachments.length > 0 && (
               <div className="space-y-2">
-                <h4 className="font-medium text-sm text-gray-700">Attached Files:</h4>
+                <h4 className="font-medium text-sm text-gray-300">Attached Files:</h4>
                 {formData.attachments.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                  <div key={file.id} className="flex items-center justify-between p-2 bg-gray-700 rounded-md">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium">{file.name}</span>
-                      <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
+                      <span className="text-sm font-medium text-gray-100">{file.name}</span>
+                      <span className="text-xs text-gray-400">({formatFileSize(file.size)})</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveFile(file.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
+                      className="text-red-400 hover:text-red-300 text-sm"
                     >
                       Remove
                     </button>

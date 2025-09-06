@@ -43,7 +43,7 @@ function ComparisonsContent() {
               <div key={comparison.id} className="bg-gray-800 border border-gray-700 rounded-lg p-6 hover:border-gray-600 transition-colors">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <Link href={`/comparisons/${comparison.slug}/edit`}>
+                    <Link href={`/comparisons/${comparison.slug}`}>
                       <h2 className="text-xl font-semibold text-blue-400 hover:text-blue-300 mb-2">
                         {comparison.name}
                       </h2>
