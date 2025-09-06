@@ -1102,12 +1102,12 @@ For general documents:
         )}
 
         {isAddingContender && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 mb-6">
             <form onSubmit={handleAddContender}>
-              <h2 className="text-xl font-semibold mb-4">Add New Contender</h2>
+              <h2 className="text-xl font-semibold text-gray-100 mb-4">Add New Contender</h2>
               
               <div className="mb-4">
-                <label htmlFor="contender-name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="contender-name" className="block text-sm font-medium text-gray-300 mb-2">
                   Name
                 </label>
                 <input
@@ -1116,13 +1116,13 @@ For general documents:
                   value={newContender.name}
                   onChange={(e) => setNewContender(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Contender name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
               </div>
 
               <div className="mb-4">
-                <label htmlFor="contender-description" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="contender-description" className="block text-sm font-medium text-gray-300 mb-2">
                   Description (optional)
                 </label>
                 <textarea
@@ -1131,17 +1131,17 @@ For general documents:
                   onChange={(e) => setNewContender(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Brief description of this contender"
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {comparison.properties.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-medium mb-3">Properties</h3>
+                  <h3 className="text-lg font-medium text-gray-200 mb-3">Properties</h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     {comparison.properties.map((property) => (
                       <div key={property.key}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
                           {property.name} ({property.type})
                         </label>
                         {renderPropertyInput(
@@ -1159,7 +1159,7 @@ For general documents:
               )}
 
               <div className="mb-6">
-                <h3 className="text-lg font-medium mb-3">File Attachments</h3>
+                <h3 className="text-lg font-medium text-gray-200 mb-3">File Attachments</h3>
                 <div 
                   className="border border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50 transition-colors"
                   onDragOver={handleDragOver}
@@ -1198,7 +1198,7 @@ For general documents:
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Hyperlinks
                 </label>
                 {newContender.hyperlinks.map((link, index) => (
@@ -1208,7 +1208,7 @@ For general documents:
                       value={link}
                       onChange={(e) => updateNewContenderArray('hyperlinks', index, e.target.value)}
                       placeholder="Enter a URL (e.g., https://example.com)"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {newContender.hyperlinks.length > 1 && (
                       <button
@@ -1232,7 +1232,7 @@ For general documents:
 
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Pros
                   </label>
                   {newContender.pros.map((pro, index) => (
@@ -1242,7 +1242,7 @@ For general documents:
                         value={pro}
                         onChange={(e) => updateNewContenderArray('pros', index, e.target.value)}
                         placeholder="Enter a pro"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       />
                       {newContender.pros.length > 1 && (
                         <button
@@ -1265,7 +1265,7 @@ For general documents:
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Cons
                   </label>
                   {newContender.cons.map((con, index) => (
@@ -1275,7 +1275,7 @@ For general documents:
                         value={con}
                         onChange={(e) => updateNewContenderArray('cons', index, e.target.value)}
                         placeholder="Enter a con"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                       />
                       {newContender.cons.length > 1 && (
                         <button
@@ -1311,7 +1311,7 @@ For general documents:
                     setIsAddingContender(false);
                     setNewContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
                   }}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-md transition-colors"
+                  className="bg-gray-600 hover:bg-gray-500 text-gray-100 font-semibold px-4 py-2 rounded-md transition-colors"
                 >
                   Cancel
                 </button>

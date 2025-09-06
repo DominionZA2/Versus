@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-900 text-gray-100`}>
-        <header className="bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6">
+        <header className="sticky top-0 z-50 bg-gray-800 border-b border-gray-700 h-16 flex items-center justify-between px-6">
           <a href="/" className="text-xl font-bold text-white hover:text-gray-300 transition-colors">Versus</a>
           <nav className="flex items-center space-x-4">
             <a href="/comparisons" className="text-gray-300 hover:text-white px-3 py-2 rounded transition-colors">
