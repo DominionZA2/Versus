@@ -9,6 +9,7 @@ import { storage } from '@/lib/storage';
 import AnalysisResultsTabs from '@/components/AnalysisResultsTabs';
 import AILoadingAnimation from '@/components/AILoadingAnimation';
 import FileAnalysisList from '@/components/FileAnalysisList';
+import UnifiedAnalysisResultsGrid from '@/components/UnifiedAnalysisResultsGrid';
 import ContenderForm from '@/components/ContenderForm';
 
 export default function ComparisonDetailPage() {
@@ -138,12 +139,12 @@ export default function ComparisonDetailPage() {
       });
     });
 
-    // Initialize analysis results with pending status
+    // Initialize analysis results
     setAnalysisResults(filesToAnalyze.map(file => ({
       id: file.id,
       fileName: file.fileName,
       contenderName: file.contenderName,
-      status: 'pending' as const
+      status: 'analyzing' as const
     })));
 
     try {
@@ -154,12 +155,7 @@ export default function ComparisonDetailPage() {
           return;
         }
 
-        // Update status to analyzing
-        setAnalysisResults(prev => prev.map(result => 
-          result.id === file.id 
-            ? { ...result, status: 'analyzing' as const }
-            : result
-        ));
+        // File is being analyzed (status already set to 'analyzing' in initialization)
 
         try {
           const analysisRequest = {
@@ -986,10 +982,20 @@ export default function ComparisonDetailPage() {
                   )}
                 </div>
                 
-                {analysisResults.length > 0 && (
+                {/* Show busy indicator during analysis */}
+                {isAnalyzingFiles && (
+                  <div className="mt-4 flex items-center justify-center py-8">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-gray-300 text-lg">🧠 Analysing data like a digital detective...</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show unified results grid when analysis is complete */}
+                {!isAnalyzingFiles && analysisResults.length > 0 && analysisResults.some(r => r.status === 'completed') && (
                   <div className="mt-4">
-                    <h4 className="font-medium text-gray-200 mb-4">Analysis Results:</h4>
-                    <FileAnalysisList results={analysisResults} />
+                    <UnifiedAnalysisResultsGrid results={analysisResults} />
                   </div>
                 )}
               </div>
