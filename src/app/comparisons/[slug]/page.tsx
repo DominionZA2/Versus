@@ -148,72 +148,59 @@ export default function ComparisonDetailPage() {
     })));
 
     try {
-      // Process files sequentially
-      for (const file of filesToAnalyze) {
-        // Check if the request was aborted before processing each file
-        if (abortController.signal.aborted) {
-          return;
-        }
-
-        // File is being analyzed (status already set to 'analyzing' in initialization)
-
-        try {
-          const analysisRequest = {
-            type: 'extract_properties' as const,
-            content: file.fileData,
-            context: {
-              comparisonName: comparison?.name,
-              attachmentType: file.fileType,
-              contenderName: file.contenderName,
-              customInstructions: customInstructions.trim() || undefined
-            }
-          };
-
-          console.log(`Analyzing file "${file.fileName}" from contender "${file.contenderName}"`);
-
-          const result = await aiService.analyze(analysisRequest);
-          
-          // Check if the request was aborted after analysis
-          if (abortController.signal.aborted) {
-            return;
-          }
-
-          if (result.success) {
-            setAnalysisResults(prev => prev.map(prevResult => 
-              prevResult.id === file.id 
-                ? { 
-                    ...prevResult, 
-                    status: 'completed' as const,
-                    data: result.data,
-                    rawJson: JSON.stringify(result.data, null, 2)
-                  }
-                : prevResult
-            ));
-          } else {
-            setAnalysisResults(prev => prev.map(prevResult => 
-              prevResult.id === file.id 
-                ? { 
-                    ...prevResult, 
-                    status: 'error' as const,
-                    error: result.error || 'Unknown error'
-                  }
-                : prevResult
-            ));
-          }
-        } catch (error) {
-          setAnalysisResults(prev => prev.map(prevResult => 
-            prevResult.id === file.id 
-              ? { 
-                  ...prevResult, 
-                  status: 'error' as const,
-                  error: error instanceof Error ? error.message : 'Unknown error'
-                }
-              : prevResult
-          ));
-        }
+      // Check if the request was aborted
+      if (abortController.signal.aborted) {
+        return;
       }
 
+      // Combine all files into a single request with structured content
+      const combinedContent = filesToAnalyze.map(file => 
+        `=== FILE: ${file.fileName} (${file.contenderName}) ===\n${file.fileData}\n`
+      ).join('\n');
+      
+      const analysisRequest = {
+        type: 'extract_properties' as const,
+        content: combinedContent,
+        context: {
+          comparisonName: comparison?.name,
+          customInstructions: customInstructions.trim() || undefined,
+          fileCount: filesToAnalyze.length,
+          fileNames: filesToAnalyze.map(f => `${f.fileName} (${f.contenderName})`).join(', ')
+        }
+      };
+
+      console.log(`Analyzing ${filesToAnalyze.length} files in single request`);
+
+      const result = await aiService.analyze(analysisRequest);
+      
+      // Check if the request was aborted after analysis
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      if (result.success) {
+        // Create individual results for each file with the combined analysis data
+        setAnalysisResults(prev => prev.map(prevResult => ({
+          ...prevResult,
+          status: 'completed' as const,
+          data: result.data,
+          rawJson: JSON.stringify(result.data, null, 2)
+        })));
+      } else {
+        // Mark all as error if the request failed
+        setAnalysisResults(prev => prev.map(prevResult => ({
+          ...prevResult,
+          status: 'error' as const,
+          error: result.error || 'Analysis failed'
+        })));
+      }
     } catch (error) {
+      // Mark all files as error if exception occurs
+      setAnalysisResults(prev => prev.map(prevResult => ({
+        ...prevResult,
+        status: 'error' as const,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })));
       // Check if the error is due to abortion
       if (abortController.signal.aborted) {
         console.log('Analysis was cancelled');
@@ -996,6 +983,26 @@ export default function ComparisonDetailPage() {
                 {!isAnalyzingFiles && analysisResults.length > 0 && analysisResults.some(r => r.status === 'completed') && (
                   <div className="mt-4">
                     <UnifiedAnalysisResultsGrid results={analysisResults} />
+                  </div>
+                )}
+                
+                {/* Show error message if all files failed */}
+                {!isAnalyzingFiles && analysisResults.length > 0 && analysisResults.every(r => r.status === 'error') && (
+                  <div className="mt-4 bg-red-900/20 border border-red-800 rounded-md p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <span className="text-red-400 text-lg">❌</span>
+                      </div>
+                      <div>
+                        <h3 className="text-red-300 font-medium mb-2">Analysis Failed</h3>
+                        <p className="text-red-200 text-sm mb-2">
+                          {analysisResults[0]?.error || 'Unknown error occurred'}
+                        </p>
+                        <p className="text-red-200/70 text-xs">
+                          Check the browser console for more details.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
