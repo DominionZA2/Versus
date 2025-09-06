@@ -13,7 +13,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     providers: [],
     activeProvider: 'none'
   });
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [defaultModel, setDefaultModel] = useState<string>('');
   const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
   const [tempApiKeys, setTempApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
   const [isEditing, setIsEditing] = useState(false);
@@ -30,7 +30,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       if (savedConfig.activeProvider !== 'none') {
         const activeProviderConfig = savedConfig.providers.find(p => p.provider === savedConfig.activeProvider);
         if (activeProviderConfig) {
-          setSelectedModel(activeProviderConfig.model);
+          setDefaultModel(activeProviderConfig.model);
         }
       }
       // Load API keys from all providers
@@ -70,8 +70,8 @@ export default function AISettings({ onClose }: AISettingsProps) {
     ];
   };
 
-  const handleModelChange = (model: string) => {
-    setSelectedModel(model);
+  const handleDefaultModelChange = (model: string) => {
+    setDefaultModel(model);
     // Auto-save after a short delay
     setTimeout(() => {
       saveModelAndProvider(model);
@@ -139,8 +139,8 @@ export default function AISettings({ onClose }: AISettingsProps) {
   };
 
   const getCurrentProvider = (): 'anthropic' | 'openai' | null => {
-    if (!selectedModel) return null;
-    const modelInfo = getAllModels().find(m => m.value === selectedModel);
+    if (!defaultModel) return null;
+    const modelInfo = getAllModels().find(m => m.value === defaultModel);
     return modelInfo?.provider || null;
   };
 
@@ -219,8 +219,8 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
   const currentProvider = getCurrentProvider();
   const currentApiKey = getCurrentApiKey();
-  const testKey = currentProvider ? `${currentProvider}-${selectedModel}` : '';
-  const canTest = selectedModel && currentApiKey && currentProvider;
+  const testKey = currentProvider ? `${currentProvider}-${defaultModel}` : '';
+  const canTest = defaultModel && currentApiKey && currentProvider;
 
   return (
     <div className="p-6">
@@ -349,15 +349,15 @@ export default function AISettings({ onClose }: AISettingsProps) {
           </div>
         </div>
 
-        {/* Model Selection - After API Keys */}
+        {/* Default Model Selection - After API Keys */}
         {(apiKeys.anthropic.trim() !== '' || apiKeys.openai.trim() !== '') && (
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              AI Model
+              Default AI Model
             </label>
             <select
-              value={selectedModel}
-              onChange={(e) => handleModelChange(e.target.value)}
+              value={defaultModel}
+              onChange={(e) => handleDefaultModelChange(e.target.value)}
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {getAllModels().map(option => (
@@ -367,16 +367,16 @@ export default function AISettings({ onClose }: AISettingsProps) {
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-400">
-              Select which AI model to use for analysis features
+              Select the default AI model to use for analysis features
             </p>
           </div>
         )}
 
         {/* AI Features Preview */}
-        {selectedModel && currentApiKey && (
+        {defaultModel && currentApiKey && (
           <div className="bg-green-900/20 border border-green-800 rounded-md p-4">
             <h3 className="text-sm font-medium text-green-300 mb-2">
-              AI Features Available (using {getAllModels().find(m => m.value === selectedModel)?.label}):
+              AI Features Available (using {getAllModels().find(m => m.value === defaultModel)?.label}):
             </h3>
             <ul className="text-sm text-green-400 space-y-1">
               <li>• Extract properties from contender descriptions and attachments</li>
@@ -387,13 +387,6 @@ export default function AISettings({ onClose }: AISettingsProps) {
           </div>
         )}
 
-        {!selectedModel && (
-          <div className="bg-gray-800 border border-gray-700 rounded-md p-4">
-            <p className="text-sm text-gray-400">
-              Select an AI model above to get started with AI features for automatic content analysis and property extraction.
-            </p>
-          </div>
-        )}
 
         <p className="text-xs text-gray-400">
           Your API keys are stored locally in your browser and never sent to our servers.
