@@ -554,7 +554,7 @@ For general documents:
 
         {isManagingProperties && (
           <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-100 mb-4">Manage Comparison Properties</h2>
+            <h2 className="text-xl font-semibold text-gray-100 mb-4">Manage comparison properties for {comparison.name}</h2>
             
             {/* Tab Navigation */}
             <div className="flex border-b border-gray-600 mb-6">

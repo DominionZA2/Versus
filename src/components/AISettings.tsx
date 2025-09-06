@@ -17,6 +17,8 @@ export default function AISettings({ onClose }: AISettingsProps) {
   const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
   const [tempApiKeys, setTempApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
   const [tempDefaultModel, setTempDefaultModel] = useState<string>('');
+  const [providerEnabled, setProviderEnabled] = useState<Record<'anthropic' | 'openai', boolean>>({ anthropic: false, openai: false });
+  const [tempProviderEnabled, setTempProviderEnabled] = useState<Record<'anthropic' | 'openai', boolean>>({ anthropic: false, openai: false });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -37,10 +39,12 @@ export default function AISettings({ onClose }: AISettingsProps) {
           setTempDefaultModel(activeProviderConfig.model);
         }
       }
-      // Load API keys from all providers
+      // Load API keys and enabled state from all providers
       savedConfig.providers.forEach(p => {
         setApiKeys(prev => ({ ...prev, [p.provider]: p.apiKey }));
         setTempApiKeys(prev => ({ ...prev, [p.provider]: p.apiKey }));
+        setProviderEnabled(prev => ({ ...prev, [p.provider]: p.enabled }));
+        setTempProviderEnabled(prev => ({ ...prev, [p.provider]: p.enabled }));
       });
     }
   }, []);
@@ -62,10 +66,11 @@ export default function AISettings({ onClose }: AISettingsProps) {
       { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Powerful)', provider: 'openai' as const }
     ];
 
-    // Filter models based on available API keys (use temp keys for immediate UI feedback)
+    // Filter models based on available API keys AND enabled state (use temp values for immediate UI feedback)
     const availableModels = allModels.filter(model => {
       const hasApiKey = tempApiKeys[model.provider] && tempApiKeys[model.provider].trim() !== '';
-      return hasApiKey;
+      const isEnabled = tempProviderEnabled[model.provider];
+      return hasApiKey && isEnabled;
     });
 
     return [
@@ -82,16 +87,47 @@ export default function AISettings({ onClose }: AISettingsProps) {
     setTempApiKeys(prev => ({ ...prev, [provider]: apiKey }));
   };
 
+  const handleTempProviderEnabledChange = (provider: 'anthropic' | 'openai', enabled: boolean) => {
+    setTempProviderEnabled(prev => ({ ...prev, [provider]: enabled }));
+  };
+
   const saveApiKey = (provider: 'anthropic' | 'openai', apiKey: string) => {
     // Update local state
     setApiKeys(prev => ({ ...prev, [provider]: apiKey }));
     
-    // Save to service
+    // Save to service - use the current enabled state, don't base it on API key presence
+    const isEnabled = tempProviderEnabled[provider];
     const providerConfig: AIProviderConfig = {
       provider,
       apiKey,
       model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini',
-      enabled: apiKey.trim() !== ''
+      enabled: isEnabled
+    };
+    
+    aiService.updateProvider(providerConfig);
+    
+    // Update local config
+    const newConfig = { ...config };
+    const existingIndex = newConfig.providers.findIndex(p => p.provider === provider);
+    if (existingIndex >= 0) {
+      newConfig.providers[existingIndex] = providerConfig;
+    } else {
+      newConfig.providers.push(providerConfig);
+    }
+    setConfig(newConfig);
+  };
+
+  const saveProviderEnabled = (provider: 'anthropic' | 'openai', enabled: boolean) => {
+    // Update local state
+    setProviderEnabled(prev => ({ ...prev, [provider]: enabled }));
+    
+    // Get existing provider config or create new one
+    const existingConfig = config.providers.find(p => p.provider === provider);
+    const providerConfig: AIProviderConfig = {
+      provider,
+      apiKey: existingConfig?.apiKey || tempApiKeys[provider] || '',
+      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini'),
+      enabled
     };
     
     aiService.updateProvider(providerConfig);
@@ -117,6 +153,13 @@ export default function AISettings({ onClose }: AISettingsProps) {
       }
     });
 
+    // Save provider enabled states
+    Object.entries(tempProviderEnabled).forEach(([provider, enabled]) => {
+      if (providerEnabled[provider as 'anthropic' | 'openai'] !== enabled) {
+        saveProviderEnabled(provider as 'anthropic' | 'openai', enabled);
+      }
+    });
+
     // Save model and provider
     if (tempDefaultModel !== defaultModel) {
       setDefaultModel(tempDefaultModel);
@@ -139,8 +182,8 @@ export default function AISettings({ onClose }: AISettingsProps) {
       }
     }
     
-    // Set the active provider and model
-    if (model && activeProvider !== 'none' && apiKeys[activeProvider]?.trim()) {
+    // Set the active provider and model - check both API key and enabled state
+    if (model && activeProvider !== 'none' && apiKeys[activeProvider]?.trim() && tempProviderEnabled[activeProvider]) {
       aiService.setActiveProvider(activeProvider);
       const newConfig = { ...config };
       newConfig.activeProvider = activeProvider;
@@ -275,9 +318,20 @@ export default function AISettings({ onClose }: AISettingsProps) {
           
           {/* Anthropic API Key */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Anthropic (Claude) API Key
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Anthropic (Claude) API Key
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={tempProviderEnabled.anthropic}
+                  onChange={(e) => handleTempProviderEnabledChange('anthropic', e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span>Enabled</span>
+              </label>
+            </div>
             <div className="relative">
               <input
                 type={showApiKeys['anthropic'] ? "text" : "password"}
@@ -330,9 +384,20 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
           {/* OpenAI API Key */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              OpenAI (GPT) API Key
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-300">
+                OpenAI (GPT) API Key
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={tempProviderEnabled.openai}
+                  onChange={(e) => handleTempProviderEnabledChange('openai', e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span>Enabled</span>
+              </label>
+            </div>
             <div className="relative">
               <input
                 type={showApiKeys['openai'] ? "text" : "password"}
@@ -408,7 +473,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
         )}
 
         {/* AI Features Preview */}
-        {tempDefaultModel && currentApiKey && (
+        {tempDefaultModel && currentApiKey && currentProvider && tempProviderEnabled[currentProvider] && (
           <div className="bg-green-900/20 border border-green-800 rounded-md p-4">
             <h3 className="text-sm font-medium text-green-300 mb-2">
               AI Features Available (using {getAllModels().find(m => m.value === tempDefaultModel)?.label}):
