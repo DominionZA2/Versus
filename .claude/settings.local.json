@@ -40,7 +40,11 @@
       "Bash(dir)",
       "Bash(tasklist:*)",
       "Bash(chmod:*)",
-      "Bash(./start-dev.sh:*)"
+      "Bash(./start-dev.sh:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(sed:*)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   }

@@ -1330,9 +1330,9 @@ For general documents:
             {contenders.map((contender) => (
               <div 
                 key={contender.id} 
-                className={`bg-white rounded-lg shadow-md p-6 ${
+                className={`bg-gray-800 border border-gray-700 rounded-lg p-6 ${
                   editingContender !== contender.id 
-                    ? 'hover:shadow-lg transition-all duration-200 hover:border-blue-200 border border-transparent' 
+                    ? 'hover:shadow-lg transition-all duration-200 hover:border-blue-500' 
                     : ''
                 }`}
                 onDragOver={editingContender !== contender.id ? handleDragOver : undefined}
@@ -1551,14 +1551,14 @@ For general documents:
                   <>
                     <div className="flex justify-between items-start mb-4">
                       <h3 
-                        className="text-xl font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+                        className="text-xl font-semibold text-blue-400 hover:text-blue-300 cursor-pointer"
                         onClick={() => handleEditContender(contender)}
                       >
                         {contender.name}
                       </h3>
                       <button
                         onClick={() => handleDeleteContender(contender.id)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
+                        className="text-red-400 hover:text-red-300 font-medium text-sm"
                       >
                         Delete
                       </button>
@@ -1566,13 +1566,13 @@ For general documents:
 
                     {contender.description && (
                       <div className="mb-4">
-                        <p className="text-gray-600 text-sm italic">{contender.description}</p>
+                        <p className="text-gray-400 text-sm italic">{contender.description}</p>
                       </div>
                     )}
 
                     {comparison.properties.length > 0 && Object.keys(contender.properties).length > 0 && (
                       <div className="mb-4">
-                        <h4 className="font-medium text-gray-700 mb-2">Properties</h4>
+                        <h4 className="font-medium text-gray-200 mb-2">Properties</h4>
                         <div className="space-y-2">
                           {comparison.properties.map((property) => {
                             const value = contender.properties[property.key];
@@ -1589,8 +1589,8 @@ For general documents:
                             
                             return (
                               <div key={property.key} className="flex justify-between items-center text-sm">
-                                <span className={`${isBest ? 'text-green-600 font-medium' : 'text-gray-600'}`}>{property.name}:</span>
-                                <span className={`font-medium ${isBest ? 'text-green-600' : ''}`}>
+                                <span className={`${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`}>{property.name}:</span>
+                                <span className={`font-medium ${isBest ? 'text-green-400' : 'text-gray-100'}`}>
                                   {property.type === 'rating' ? (
                                     <div className="flex items-center gap-1">
                                       {[1, 2, 3, 4, 5].map((star) => (
@@ -1598,14 +1598,14 @@ For general documents:
                                           key={star}
                                           className={`text-sm ${
                                             (value as number) >= star 
-                                              ? isBest ? 'text-green-500' : 'text-yellow-400' 
+                                              ? isBest ? 'text-green-400' : 'text-yellow-400' 
                                               : 'text-gray-300'
                                           }`}
                                         >
                                           ★
                                         </span>
                                       ))}
-                                      <span className={`ml-1 ${isBest ? 'text-green-600' : 'text-gray-600'}`}>({value}/5)</span>
+                                      <span className={`ml-1 ${isBest ? 'text-green-400' : 'text-gray-300'}`}>({value}/5)</span>
                                     </div>
                                   ) : property.type === 'datetime' ? (
                                     new Date(value as string).toLocaleString()
@@ -1621,17 +1621,17 @@ For general documents:
                     )}
 
                     {contender.attachments && contender.attachments.length > 0 && (
-                      <div className="mb-4 pt-3 border-t border-gray-200">
+                      <div className="mb-4 pt-3 border-t border-gray-600">
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-600">Attachments:</span>
-                          <span className="font-medium">{contender.attachments.length}</span>
+                          <span className="text-gray-300">Attachments:</span>
+                          <span className="font-medium text-gray-100">{contender.attachments.length}</span>
                         </div>
                       </div>
                     )}
 
                     {contender.hyperlinks && contender.hyperlinks.length > 0 && (
-                      <div className="mb-4 pt-3 border-t border-gray-200">
-                        <h4 className="font-medium text-gray-700 mb-2">Links</h4>
+                      <div className="mb-4 pt-3 border-t border-gray-600">
+                        <h4 className="font-medium text-gray-200 mb-2">Links</h4>
                         <div className="space-y-1">
                           {contender.hyperlinks.map((hyperlink) => (
                             <div key={hyperlink.id}>
@@ -1639,7 +1639,7 @@ For general documents:
                                 href={hyperlink.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                                className="text-sm text-blue-400 hover:text-blue-300 underline break-all"
                               >
                                 {hyperlink.url}
                               </a>
@@ -1653,11 +1653,11 @@ For general documents:
                       <div className="space-y-4">
                         {contender.pros.length > 0 && (
                           <div>
-                            <h4 className="font-medium text-green-700 mb-2">Pros</h4>
+                            <h4 className="font-medium text-green-400 mb-2">Pros</h4>
                             <ul className="space-y-1">
                               {contender.pros.map((pro, index) => (
-                                <li key={index} className="text-sm text-gray-700 flex items-start">
-                                  <span className="text-green-600 mr-2">+</span>
+                                <li key={index} className="text-sm text-gray-300 flex items-start">
+                                  <span className="text-green-400 mr-2">+</span>
                                   {pro}
                                 </li>
                               ))}
@@ -1667,11 +1667,11 @@ For general documents:
 
                         {contender.cons.length > 0 && (
                           <div>
-                            <h4 className="font-medium text-red-700 mb-2">Cons</h4>
+                            <h4 className="font-medium text-red-400 mb-2">Cons</h4>
                             <ul className="space-y-1">
                               {contender.cons.map((con, index) => (
-                                <li key={index} className="text-sm text-gray-700 flex items-start">
-                                  <span className="text-red-600 mr-2">-</span>
+                                <li key={index} className="text-sm text-gray-300 flex items-start">
+                                  <span className="text-red-400 mr-2">-</span>
                                   {con}
                                 </li>
                               ))}
