@@ -15,18 +15,34 @@ class AnthropicService implements AIService {
     try {
       const prompt = this.buildPrompt(request);
       
+      console.log('=== BUILT PROMPT ===');
+      console.log(prompt);
+      console.log('=== END PROMPT ===');
+      
+      // Check if the content is a file (data URL)
+      const isFile = request.content.startsWith('data:');
+      
+      const requestBody = isFile ? {
+        provider: 'anthropic',
+        apiKey: this.config.apiKey,
+        model: this.config.model,
+        prompt,
+        maxTokens: 2000,
+        file: request.content  // Send file data separately
+      } : {
+        provider: 'anthropic',
+        apiKey: this.config.apiKey,
+        model: this.config.model,
+        prompt,
+        maxTokens: 1000
+      };
+
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          provider: 'anthropic',
-          apiKey: this.config.apiKey,
-          model: this.config.model,
-          prompt,
-          maxTokens: 1000
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -35,6 +51,12 @@ class AnthropicService implements AIService {
       }
 
       const data = await response.json();
+      console.log('=== RAW AI RESPONSE ===');
+      console.log(data);
+      console.log('=== AI MESSAGE CONTENT ===');
+      console.log(data.content[0].text);
+      console.log('=== END AI RESPONSE ===');
+      
       return this.parseResponse(data.content[0].text, request.type);
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -68,16 +90,26 @@ class AnthropicService implements AIService {
 
     switch (type) {
       case 'extract_properties':
-        return `Analyze the following text and extract relevant comparison properties. Return a JSON array of objects with "name", "type" (text/number/rating/datetime), and optional "value" fields.
+        const customInstructions = context?.customInstructions || 'Look for key-value pairs, specifications, tables, or lists that could be comparison properties.';
+        return `Analyze the following document content and extract ALL properties and values you can find based on the parsing instructions.
 
-Context: This is for a comparison tool. ${context?.comparisonName ? `Comparison topic: ${context.comparisonName}` : ''}
-${context?.existingProperties?.length ? `Existing properties: ${context.existingProperties.map(p => `${p.name} (${p.type})`).join(', ')}` : ''}
+${context?.comparisonName ? `This is for a comparison about: ${context.comparisonName}` : ''}
+${context?.contenderName ? `Document is from: ${context.contenderName}` : ''}
 
-Text to analyze:
+Parsing Instructions:
+${customInstructions}
+
+Document Content:
 ${content}
 
-Please return only valid JSON in this format:
-[{"name": "Property Name", "type": "text|number|rating|datetime", "value": "optional extracted value"}]`;
+CRITICAL: Return ONLY valid JSON with ALL properties found in the document. Do not return existing properties - only what you extract from THIS document content:
+[{"name": "Property Name", "type": "text|number|rating|datetime", "value": "extracted value"}]
+
+Type guidelines:
+- "number" for prices, quantities, measurements  
+- "text" for descriptions, names, categories
+- "rating" for scores, ratings 
+- "datetime" for dates, times`;
 
       case 'generate_summary':
         return `Generate a concise summary of the following content for use in a comparison tool:

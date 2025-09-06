@@ -17,6 +17,8 @@ export interface AIAnalysisRequest {
     existingProperties?: Array<{ name: string; type: string }>;
     comparisonName?: string;
     attachmentType?: string;
+    contenderName?: string;
+    customInstructions?: string;
   };
 }
 

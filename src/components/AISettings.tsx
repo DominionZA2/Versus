@@ -72,34 +72,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
   const handleModelChange = (model: string) => {
     setSelectedModel(model);
-    const modelInfo = getAllModels().find(m => m.value === model);
-    if (modelInfo && modelInfo.provider) {
-      const provider = modelInfo.provider;
-      const apiKey = apiKeys[provider];
-      
-      if (apiKey) {
-        // Update the provider config
-        const providerConfig: AIProviderConfig = {
-          provider,
-          apiKey,
-          model,
-          enabled: true
-        };
-        aiService.updateProvider(providerConfig);
-        aiService.setActiveProvider(provider);
-        
-        // Update local config
-        const newConfig = { ...config };
-        const existingIndex = newConfig.providers.findIndex(p => p.provider === provider);
-        if (existingIndex >= 0) {
-          newConfig.providers[existingIndex] = providerConfig;
-        } else {
-          newConfig.providers.push(providerConfig);
-        }
-        newConfig.activeProvider = provider;
-        setConfig(newConfig);
-      }
-    }
+    // Don't save immediately - wait for Save button
   };
 
   const handleTempApiKeyChange = (provider: 'anthropic' | 'openai', apiKey: string) => {
@@ -115,12 +88,22 @@ export default function AISettings({ onClose }: AISettingsProps) {
     // Update both apiKeys and save to service
     setApiKeys(tempApiKeys);
     
+    // Get the selected model's provider to determine which provider should be active
+    let activeProvider: 'anthropic' | 'openai' | 'none' = 'none';
+    if (selectedModel) {
+      const modelInfo = getAllModels().find(m => m.value === selectedModel);
+      if (modelInfo && modelInfo.provider) {
+        activeProvider = modelInfo.provider;
+      }
+    }
+    
     // Save each provider
     Object.entries(tempApiKeys).forEach(([provider, apiKey]) => {
+      const providerKey = provider as 'anthropic' | 'openai';
       const providerConfig: AIProviderConfig = {
-        provider: provider as 'anthropic' | 'openai',
+        provider: providerKey,
         apiKey,
-        model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini',
+        model: providerKey === activeProvider ? selectedModel : (providerKey === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini'),
         enabled: apiKey.trim() !== ''
       };
       
@@ -128,7 +111,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       
       // Update local config
       const newConfig = { ...config };
-      const existingIndex = newConfig.providers.findIndex(p => p.provider === provider);
+      const existingIndex = newConfig.providers.findIndex(p => p.provider === providerKey);
       if (existingIndex >= 0) {
         newConfig.providers[existingIndex] = providerConfig;
       } else {
@@ -137,16 +120,12 @@ export default function AISettings({ onClose }: AISettingsProps) {
       setConfig(newConfig);
     });
 
-    // Set active provider logic
-    const hasAnthropic = tempApiKeys.anthropic.trim() !== '';
-    const hasOpenAI = tempApiKeys.openai.trim() !== '';
-    
-    if (hasAnthropic && config.activeProvider === 'none') {
-      aiService.setActiveProvider('anthropic');
-    } else if (hasOpenAI && config.activeProvider === 'none') {
-      aiService.setActiveProvider('openai');
-    } else if (!hasAnthropic && !hasOpenAI) {
-      aiService.setActiveProvider('none');
+    // Set the active provider based on selected model
+    if (selectedModel && activeProvider !== 'none' && tempApiKeys[activeProvider].trim() !== '') {
+      aiService.setActiveProvider(activeProvider);
+      const newConfig = { ...config };
+      newConfig.activeProvider = activeProvider;
+      setConfig(newConfig);
     }
     
     setIsEditing(false);

@@ -18,6 +18,19 @@ export default function ComparisonDetailPage() {
   const [editingContender, setEditingContender] = useState<string | null>(null);
   const [isManagingProperties, setIsManagingProperties] = useState(false);
   const [isManagingAI, setIsManagingAI] = useState(false);
+  const [isAnalyzingFiles, setIsAnalyzingFiles] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<string | null>(null);
+  const [customInstructions, setCustomInstructions] = useState<string>(`For tables or lists with product information:
+- Combine code + description as property name (e.g., "ABC123 - Product Name")
+- Use net price, final price, or total as the value
+- For multiple columns, prioritize: Net Price > Total > Price > Amount
+- Include currency symbol if present
+- Skip header rows and totals
+
+For general documents:
+- Look for key-value pairs, specifications, or feature lists
+- Extract meaningful properties with their values
+- Convert text descriptions to structured data`);
   const [editingProperty, setEditingProperty] = useState<string | null>(null);
   const [newProperty, setNewProperty] = useState({ 
     name: '', 
@@ -85,6 +98,77 @@ export default function ComparisonDetailPage() {
     if (confirm('Are you sure you want to delete this contender?')) {
       storage.deleteContender(id);
       setContenders(comparison ? storage.getContenders(comparison.id) : []);
+    }
+  };
+
+  const handleAnalyzeFiles = async () => {
+    if (!aiService.isEnabled()) {
+      alert('Please configure an AI model in AI Settings first.');
+      return;
+    }
+
+    // Check if we have any contenders with files
+    const contendersWithFiles = contenders.filter(c => c.attachments && c.attachments.length > 0);
+    if (contendersWithFiles.length === 0) {
+      alert('No files found to analyze. Please attach files to a contender first.');
+      return;
+    }
+
+    setIsAnalyzingFiles(true);
+    setAnalysisResults(null);
+
+    try {
+      // For testing: Use first contender and first file
+      const firstContender = contendersWithFiles[0];
+      const firstFile = firstContender.attachments[0];
+
+      console.log(`Analyzing file "${firstFile.name}" from contender "${firstContender.name}"`);
+      
+      // Send the file data as-is to the AI
+      const fileContent = firstFile.data;
+      
+      console.log('File details:', {
+        name: firstFile.name,
+        type: firstFile.type,
+        size: firstFile.size,
+        dataLength: firstFile.data.length
+      });
+
+      const analysisRequest = {
+        type: 'extract_properties' as const,
+        content: fileContent,
+        context: {
+          comparisonName: comparison?.name,
+          attachmentType: firstFile.type,
+          contenderName: firstContender.name,
+          customInstructions: customInstructions.trim() || undefined
+        }
+      };
+
+      console.log('=== FILE CONTENT ===');
+      console.log(fileContent);
+      console.log('=== ANALYSIS REQUEST ===');
+      console.log(analysisRequest);
+
+      const result = await aiService.analyze(analysisRequest);
+      
+      console.log('=== ANALYSIS RESULT ===');
+      console.log(result);
+      console.log('=== RAW RESPONSE ===');
+      if (result.success && result.data) {
+        console.log('Parsed data:', result.data);
+      }
+      
+      if (result.success) {
+        setAnalysisResults(JSON.stringify(result.data, null, 2));
+      } else {
+        setAnalysisResults(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Analysis error:', error);
+      setAnalysisResults(`Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsAnalyzingFiles(false);
     }
   };
 
@@ -915,6 +999,51 @@ export default function ComparisonDetailPage() {
                 )}
               </div>
             </div>
+
+            {/* AI Analysis Section */}
+            {aiService.isEnabled() && (
+              <div className="border-t border-gray-200 pt-6 mt-6">
+                <h3 className="text-lg font-medium mb-3">AI Analysis</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Analyze attached files to automatically suggest properties for comparison.
+                </p>
+                
+                {/* Custom Instructions */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Parsing Instructions
+                  </label>
+                  <textarea
+                    value={customInstructions}
+                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    placeholder="Describe how to extract properties from your files..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    rows={6}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Customize how the AI should extract properties and values from your files. The AI will always return JSON format.
+                  </p>
+                </div>
+                
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={handleAnalyzeFiles}
+                    disabled={isAnalyzingFiles}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold px-4 py-2 rounded-md transition-colors"
+                  >
+                    {isAnalyzingFiles ? 'Analyzing Files...' : 'Analyze Attachments'}
+                  </button>
+                </div>
+                {analysisResults && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                    <h4 className="font-medium text-gray-700 mb-2">Analysis Results:</h4>
+                    <pre className="text-sm text-gray-600 whitespace-pre-wrap overflow-auto max-h-64">
+                      {analysisResults}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end mt-6">
               <button
