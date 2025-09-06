@@ -23,6 +23,9 @@ export default function RootLayout({
             <a href="/comparisons" className="text-gray-300 hover:text-white px-3 py-2 rounded transition-colors">
               Comparisons
             </a>
+            <a href="/ai-settings" className="text-gray-300 hover:text-white px-3 py-2 rounded transition-colors">
+              AI Settings
+            </a>
           </nav>
         </header>
         <div className="min-h-screen bg-gray-900">
