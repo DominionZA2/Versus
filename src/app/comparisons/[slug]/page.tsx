@@ -17,6 +17,7 @@ export default function ComparisonDetailPage() {
   const [isAddingContender, setIsAddingContender] = useState(false);
   const [editingContender, setEditingContender] = useState<string | null>(null);
   const [isManagingProperties, setIsManagingProperties] = useState(false);
+  const [activePropertiesTab, setActivePropertiesTab] = useState<'properties' | 'ai-analysis'>('properties');
   const [isManagingAI, setIsManagingAI] = useState(false);
   const [isAnalyzingFiles, setIsAnalyzingFiles] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<string | null>(null);
@@ -796,11 +797,41 @@ For general documents:
         {isManagingProperties && (
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Manage Comparison Properties</h2>
-            <p className="text-gray-600 text-sm mb-4">
-              Properties are criteria that each contender can be evaluated on (e.g., Price, Quality, Features).
-              <br />
-              <span className="text-blue-600">Drag the ⋮⋮ icon to reorder properties.</span>
-            </p>
+            
+            {/* Tab Navigation */}
+            <div className="flex border-b border-gray-200 mb-6">
+              <button
+                onClick={() => setActivePropertiesTab('properties')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activePropertiesTab === 'properties' 
+                    ? 'border-blue-500 text-blue-600' 
+                    : 'border-transparent text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Properties
+              </button>
+              {aiService.isEnabled() && (
+                <button
+                  onClick={() => setActivePropertiesTab('ai-analysis')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ml-4 ${
+                    activePropertiesTab === 'ai-analysis' 
+                      ? 'border-blue-500 text-blue-600' 
+                      : 'border-transparent text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  AI Analysis
+                </button>
+              )}
+            </div>
+
+            {/* Properties Tab Content */}
+            {activePropertiesTab === 'properties' && (
+              <div>
+                <p className="text-gray-600 text-sm mb-4">
+                  Properties are criteria that each contender can be evaluated on (e.g., Price, Quality, Features).
+                  <br />
+                  <span className="text-blue-600">Drag the ⋮⋮ icon to reorder properties.</span>
+                </p>
 
             {comparison.properties.length > 0 && (
               <div className="mb-6">
@@ -1022,13 +1053,14 @@ For general documents:
                 )}
               </div>
             </div>
+              </div>
+            )}
 
-            {/* AI Analysis Section */}
-            {aiService.isEnabled() && (
-              <div className="border-t border-gray-200 pt-6 mt-6">
-                <h3 className="text-lg font-medium mb-3">AI Analysis</h3>
+            {/* AI Analysis Tab Content */}
+            {activePropertiesTab === 'ai-analysis' && (
+              <div>
                 <p className="text-gray-600 text-sm mb-4">
-                  Analyze attached files to automatically suggest properties for comparison.
+                  Analyze attached files to automatically extract properties and values for comparison.
                 </p>
                 
                 {/* Custom Instructions */}
@@ -1038,7 +1070,10 @@ For general documents:
                   </label>
                   <textarea
                     value={customInstructions}
-                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    onChange={(e) => {
+                      setCustomInstructions(e.target.value);
+                      localStorage.setItem('ai_custom_instructions', e.target.value);
+                    }}
                     placeholder="Describe how to extract properties from your files..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     rows={6}
@@ -1287,7 +1322,7 @@ For general documents:
                   type="button"
                   onClick={() => {
                     setIsAddingContender(false);
-                    setNewContender({ name: '', description: '', pros: [''], cons: [''], properties: {}, attachments: [] });
+                    setNewContender({ name: '', description: '', pros: [''], cons: [''], hyperlinks: [''], properties: {}, attachments: [] });
                   }}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-md transition-colors"
                 >
