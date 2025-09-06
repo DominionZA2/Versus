@@ -16,7 +16,10 @@ export default function AISettings({ onClose }: AISettingsProps) {
   const [defaultModel, setDefaultModel] = useState<string>('');
   const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
   const [tempApiKeys, setTempApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
+  const [tempDefaultModel, setTempDefaultModel] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSavedToast, setShowSavedToast] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, 'idle' | 'success' | 'error'>>({});
   const [testError, setTestError] = useState<Record<string, string | null>>({});
@@ -31,6 +34,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
         const activeProviderConfig = savedConfig.providers.find(p => p.provider === savedConfig.activeProvider);
         if (activeProviderConfig) {
           setDefaultModel(activeProviderConfig.model);
+          setTempDefaultModel(activeProviderConfig.model);
         }
       }
       // Load API keys from all providers
@@ -58,9 +62,9 @@ export default function AISettings({ onClose }: AISettingsProps) {
       { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Powerful)', provider: 'openai' as const }
     ];
 
-    // Filter models based on available API keys
+    // Filter models based on available API keys (use temp keys for immediate UI feedback)
     const availableModels = allModels.filter(model => {
-      const hasApiKey = apiKeys[model.provider] && apiKeys[model.provider].trim() !== '';
+      const hasApiKey = tempApiKeys[model.provider] && tempApiKeys[model.provider].trim() !== '';
       return hasApiKey;
     });
 
@@ -70,20 +74,12 @@ export default function AISettings({ onClose }: AISettingsProps) {
     ];
   };
 
-  const handleDefaultModelChange = (model: string) => {
-    setDefaultModel(model);
-    // Auto-save after a short delay
-    setTimeout(() => {
-      saveModelAndProvider(model);
-    }, 100);
+  const handleTempDefaultModelChange = (model: string) => {
+    setTempDefaultModel(model);
   };
 
   const handleTempApiKeyChange = (provider: 'anthropic' | 'openai', apiKey: string) => {
     setTempApiKeys(prev => ({ ...prev, [provider]: apiKey }));
-    // Auto-save API key after a delay
-    setTimeout(() => {
-      saveApiKey(provider, apiKey);
-    }, 500);
   };
 
   const saveApiKey = (provider: 'anthropic' | 'openai', apiKey: string) => {
@@ -109,6 +105,28 @@ export default function AISettings({ onClose }: AISettingsProps) {
       newConfig.providers.push(providerConfig);
     }
     setConfig(newConfig);
+  };
+
+  const saveAllChanges = () => {
+    setIsSaving(true);
+    
+    // Save API keys
+    Object.entries(tempApiKeys).forEach(([provider, apiKey]) => {
+      if (apiKeys[provider as 'anthropic' | 'openai'] !== apiKey) {
+        saveApiKey(provider as 'anthropic' | 'openai', apiKey);
+      }
+    });
+
+    // Save model and provider
+    if (tempDefaultModel !== defaultModel) {
+      setDefaultModel(tempDefaultModel);
+      saveModelAndProvider(tempDefaultModel);
+    }
+
+    // Show success feedback
+    setIsSaving(false);
+    setShowSavedToast(true);
+    setTimeout(() => setShowSavedToast(false), 3000);
   };
 
   const saveModelAndProvider = (model: string) => {
@@ -139,14 +157,14 @@ export default function AISettings({ onClose }: AISettingsProps) {
   };
 
   const getCurrentProvider = (): 'anthropic' | 'openai' | null => {
-    if (!defaultModel) return null;
-    const modelInfo = getAllModels().find(m => m.value === defaultModel);
+    if (!tempDefaultModel) return null;
+    const modelInfo = getAllModels().find(m => m.value === tempDefaultModel);
     return modelInfo?.provider || null;
   };
 
   const getCurrentApiKey = (): string => {
     const provider = getCurrentProvider();
-    return provider ? apiKeys[provider] : '';
+    return provider ? tempApiKeys[provider] : '';
   };
 
   const testApiKey = async (provider: 'anthropic' | 'openai') => {
@@ -155,7 +173,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     setTestError(prev => ({ ...prev, [provider]: null }));
 
     try {
-      const apiKey = apiKeys[provider];
+      const apiKey = tempApiKeys[provider];
       if (!apiKey) {
         setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
         setTestError(prev => ({ ...prev, [provider]: 'API key required' }));
@@ -219,19 +237,36 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
   const currentProvider = getCurrentProvider();
   const currentApiKey = getCurrentApiKey();
-  const testKey = currentProvider ? `${currentProvider}-${defaultModel}` : '';
-  const canTest = defaultModel && currentApiKey && currentProvider;
+  const testKey = currentProvider ? `${currentProvider}-${tempDefaultModel}` : '';
+  const canTest = tempDefaultModel && currentApiKey && currentProvider;
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-100">AI Integration</h2>
         <div className="flex gap-2">
+          <button
+            onClick={saveAllChanges}
+            disabled={isSaving}
+            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 disabled:bg-blue-500 disabled:cursor-not-allowed text-white rounded-md transition-colors"
+          >
+            {isSaving ? 'Saving...' : 'Save'}
+          </button>
         </div>
       </div>
-      <p className="text-gray-400 text-sm mb-6">
+      <p className="text-gray-400 text-sm mb-4">
         Configure your AI providers to enable automatic property extraction, content analysis, and summarization features.
       </p>
+      
+      {/* Inline Save Feedback */}
+      {showSavedToast && (
+        <div className="mb-4 bg-green-900/20 border border-green-800 rounded-md p-3">
+          <div className="flex items-center gap-2 text-green-400 text-sm">
+            <span className="w-4 h-4">✓</span>
+            Settings saved successfully
+          </div>
+        </div>
+      )}
 
       <div className="space-y-6">
         {/* API Keys */}
@@ -350,14 +385,14 @@ export default function AISettings({ onClose }: AISettingsProps) {
         </div>
 
         {/* Default Model Selection - After API Keys */}
-        {(apiKeys.anthropic.trim() !== '' || apiKeys.openai.trim() !== '') && (
+        {(tempApiKeys.anthropic.trim() !== '' || tempApiKeys.openai.trim() !== '') && (
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Default AI Model
             </label>
             <select
-              value={defaultModel}
-              onChange={(e) => handleDefaultModelChange(e.target.value)}
+              value={tempDefaultModel}
+              onChange={(e) => handleTempDefaultModelChange(e.target.value)}
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {getAllModels().map(option => (
@@ -373,10 +408,10 @@ export default function AISettings({ onClose }: AISettingsProps) {
         )}
 
         {/* AI Features Preview */}
-        {defaultModel && currentApiKey && (
+        {tempDefaultModel && currentApiKey && (
           <div className="bg-green-900/20 border border-green-800 rounded-md p-4">
             <h3 className="text-sm font-medium text-green-300 mb-2">
-              AI Features Available (using {getAllModels().find(m => m.value === defaultModel)?.label}):
+              AI Features Available (using {getAllModels().find(m => m.value === tempDefaultModel)?.label}):
             </h3>
             <ul className="text-sm text-green-400 space-y-1">
               <li>• Extract properties from contender descriptions and attachments</li>
