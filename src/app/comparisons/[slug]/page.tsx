@@ -424,6 +424,40 @@ For general documents:
     e.preventDefault();
     e.stopPropagation();
 
+    // Check for URLs first
+    const urlData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+    if (urlData) {
+      const urls = urlData.split('\n').filter(url => url.trim() && !url.startsWith('#'));
+      if (urls.length > 0) {
+        const url = urls[0].trim();
+        // Basic URL validation
+        try {
+          new URL(url);
+          
+          const contender = contenders.find(c => c.id === contenderId);
+          if (contender) {
+            const newHyperlink: Hyperlink = {
+              id: storage.generateId(),
+              url: url,
+              addedAt: new Date().toISOString()
+            };
+            
+            const updatedContender: Contender = {
+              ...contender,
+              hyperlinks: [...(contender.hyperlinks || []), newHyperlink]
+            };
+            
+            storage.saveContender(updatedContender);
+            setContenders(storage.getContenders(comparison!.id));
+          }
+          return;
+        } catch {
+          // Not a valid URL, continue to file handling
+        }
+      }
+    }
+
+    // Handle files if no URL was found
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
 
@@ -907,7 +941,7 @@ For general documents:
                             
                             return (
                               <div key={property.key} className="flex justify-between items-center text-sm">
-                                <span className={`${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`}>{property.name}:</span>
+                                <span className={`${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`}>{property.name}</span>
                                 <span className={`font-medium ${isBest ? 'text-green-400' : 'text-gray-100'}`}>
                                   {property.type === 'rating' ? (
                                     <div className="flex items-center gap-1">
@@ -940,14 +974,17 @@ For general documents:
 
                     <div className="mb-4 pt-3 border-t border-gray-600">
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-300">Attachments:</span>
+                        <span className="text-gray-300">Attachments</span>
                         <span className="font-medium text-gray-100">{contender.attachments?.length || 0}</span>
                       </div>
                     </div>
 
-                    {contender.hyperlinks && contender.hyperlinks.length > 0 && (
-                      <div className="mb-4 pt-3 border-t border-gray-600">
-                        <h4 className="font-medium text-gray-200 mb-2">Links</h4>
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span className="text-gray-300">Links</span>
+                        <span className="font-medium text-gray-100">{contender.hyperlinks?.length || 0}</span>
+                      </div>
+                      {contender.hyperlinks && contender.hyperlinks.length > 0 && (
                         <div className="space-y-1">
                           {contender.hyperlinks.map((hyperlink) => (
                             <div key={hyperlink.id}>
@@ -962,8 +999,8 @@ For general documents:
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     {(contender.pros.length > 0 || contender.cons.length > 0) && (
                       <div className="space-y-4">
