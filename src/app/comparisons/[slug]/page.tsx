@@ -21,17 +21,6 @@ export default function ComparisonDetailPage() {
   const [isAnalyzingFiles, setIsAnalyzingFiles] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<string | null>(null);
   const [isAiAvailable, setIsAiAvailable] = useState(false);
-  const defaultInstructions = `For tables or lists with product information:
-- Combine code + description as property name (e.g., "ABC123 - Product Name")
-- Use net price, final price, or total as the value
-- For multiple columns, prioritize: Net Price > Total > Price > Amount
-- Include currency symbol if present
-- Skip header rows and totals
-
-For general documents:
-- Look for key-value pairs, specifications, or feature lists
-- Extract meaningful properties with their values
-- Convert text descriptions to structured data`;
 
   const [customInstructions, setCustomInstructions] = useState<string>('');
   const [editingProperty, setEditingProperty] = useState<string | null>(null);
@@ -58,10 +47,10 @@ For general documents:
       }
     }
 
-    // Load custom instructions from localStorage
+    // Load additional instructions from localStorage (default to empty since core prompt is always used)
     const savedInstructions = localStorage.getItem('ai_custom_instructions');
-    setCustomInstructions(savedInstructions || defaultInstructions);
-  }, [slug, defaultInstructions]);
+    setCustomInstructions(savedInstructions || '');
+  }, [slug]);
 
   // Check AI availability
   useEffect(() => {
@@ -858,7 +847,7 @@ For general documents:
                 {/* Custom Instructions */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Parsing Instructions
+                    Additional Instructions (Optional)
                   </label>
                   <textarea
                     value={customInstructions}
@@ -866,7 +855,7 @@ For general documents:
                       setCustomInstructions(e.target.value);
                       localStorage.setItem('ai_custom_instructions', e.target.value);
                     }}
-                    placeholder="Describe how to extract properties from your files..."
+                    placeholder="Add specific instructions for your file type or domain (e.g., 'Focus on pricing tables', 'Extract server configuration settings', etc.)"
                     className={`w-full px-3 py-2 border rounded-md text-sm ${
                       isAiAvailable 
                         ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -876,7 +865,7 @@ For general documents:
                     disabled={!isAiAvailable}
                   />
                   <p className="mt-1 text-xs text-gray-400">
-                    Customize how the AI should extract properties and values from your files. The AI will always return JSON format.
+                    The AI uses a core configuration extraction prompt. Your instructions here will be added as additional guidance for your specific use case.
                   </p>
                 </div>
                 

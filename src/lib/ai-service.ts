@@ -90,26 +90,41 @@ class AnthropicService implements AIService {
 
     switch (type) {
       case 'extract_properties':
-        const customInstructions = context?.customInstructions || 'Look for key-value pairs, specifications, tables, or lists that could be comparison properties.';
-        return `Analyze the following document content and extract ALL properties and values you can find based on the parsing instructions.
+        // Core prompt is always used - user instructions are only additional
+        const basePrompt = `You are an expert at extracting configuration key/value pairs from arbitrary files.
 
-${context?.comparisonName ? `This is for a comparison about: ${context.comparisonName}` : ''}
-${context?.contenderName ? `Document is from: ${context.contenderName}` : ''}
+TASK
+Given the file content below, find configuration entries and return them as JSON ONLY.
 
-Parsing Instructions:
-${customInstructions}
+OUTPUT
+Return a JSON array of objects with properties:
+- name: string (use dot.path for nested keys; keep original key casing)
+- value: string or number (see typing rules)
+- type: "text" | "number"
 
-Document Content:
-${content}
+RULES
+1) Recognize keys in common formats: JSON, YAML, TOML, INI, .env, XML attributes/elements, shell/PowerShell assignments, and typical config-like code constants.
+2) Ignore comments and disabled lines (e.g., starting with #, //, ;, /* ... */) and empty lines.
+3) For duplicates, keep the last effective value in the file.
+4) For nested structures, build name as a dot path (e.g., server.port, database.host).
+5) Arrays -> join values with commas into a single string (type = "text").
+6) Numbers: if the value is purely numeric (integer or float, optional leading sign), set type="number" and output value as a JSON number. Otherwise set type="text" and output the original textual value unmodified.
+7) Booleans are "text".
+8) If nothing is found, return [].
+9) Do not include any commentary, code fences, or explanations—JSON only.`;
 
-CRITICAL: Return ONLY valid JSON with ALL properties found in the document. Do not return existing properties - only what you extract from THIS document content:
-[{"name": "Property Name", "type": "text|number|rating|datetime", "value": "extracted value"}]
+        const userInstructions = context?.customInstructions;
+        const contextInfo = [
+          context?.comparisonName ? `CONTEXT: This is for a comparison about: ${context.comparisonName}` : '',
+          context?.contenderName ? `SOURCE: Document is from: ${context.contenderName}` : ''
+        ].filter(Boolean).join('\n');
 
-Type guidelines:
-- "number" for prices, quantities, measurements  
-- "text" for descriptions, names, categories
-- "rating" for scores, ratings 
-- "datetime" for dates, times`;
+        return [
+          basePrompt,
+          userInstructions ? `\nADDITIONAL INSTRUCTIONS:\n${userInstructions}` : '',
+          contextInfo ? `\n${contextInfo}` : '',
+          `\nFILE CONTENT:\n${content}`
+        ].filter(Boolean).join('');
 
       case 'generate_summary':
         return `Generate a concise summary of the following content for use in a comparison tool:
