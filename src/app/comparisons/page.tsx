@@ -48,9 +48,6 @@ function ComparisonsContent() {
                         {comparison.name}
                       </h2>
                     </Link>
-                    {comparison.description && (
-                      <p className="text-gray-300 text-sm mb-2">{comparison.description}</p>
-                    )}
                     <p className="text-gray-400 text-sm">
                       Created {new Date(comparison.createdAt).toLocaleDateString()}
                     </p>

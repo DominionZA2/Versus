@@ -13,8 +13,7 @@ interface ComparisonFormProps {
 export default function ComparisonForm({ mode, existingComparison }: ComparisonFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    name: existingComparison?.name || '',
-    description: existingComparison?.description || ''
+    name: existingComparison?.name || ''
   });
   const [error, setError] = useState('');
 
@@ -32,7 +31,6 @@ export default function ComparisonForm({ mode, existingComparison }: ComparisonF
       const comparison: Comparison = {
         id: storage.generateId(),
         name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
         slug: storage.generateSlug(formData.name.trim()),
         properties: [],
         createdAt: new Date().toISOString()
@@ -43,7 +41,6 @@ export default function ComparisonForm({ mode, existingComparison }: ComparisonF
       const updatedComparison: Comparison = {
         ...existingComparison,
         name: formData.name.trim(),
-        description: formData.description.trim() || undefined,
         slug: storage.generateSlug(formData.name.trim())
       };
       
@@ -100,19 +97,6 @@ export default function ComparisonForm({ mode, existingComparison }: ComparisonF
               )}
             </div>
 
-            <div className="mb-6">
-              <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">
-                Description (optional)
-              </label>
-              <textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Describe what you're comparing and why..."
-                rows={3}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
 
             <div className="flex gap-3">
               <button
