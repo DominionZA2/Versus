@@ -11,7 +11,7 @@ export interface AIConfig {
 }
 
 export interface AIAnalysisRequest {
-  type: 'extract_properties' | 'generate_summary' | 'suggest_values' | 'analyze_attachment';
+  type: 'extract_properties' | 'extract_properties_batch' | 'generate_summary' | 'suggest_values' | 'analyze_attachment';
   content: string;
   context?: {
     existingProperties?: Array<{ name: string; type: string }>;
@@ -19,6 +19,8 @@ export interface AIAnalysisRequest {
     attachmentType?: string;
     contenderName?: string;
     customInstructions?: string;
+    fileCount?: number;
+    fileNames?: string;
   };
 }
 

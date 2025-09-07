@@ -110,6 +110,7 @@ class AnthropicService implements AIService {
 
     switch (type) {
       case 'extract_properties':
+      case 'extract_properties_batch':
         // Core prompt is always used - user instructions are only additional
         const basePrompt = `You are an expert at extracting configuration key/value pairs from arbitrary files.
 
@@ -155,15 +156,24 @@ ${content}
 Return only the summary text, maximum 2-3 sentences.`;
 
       case 'suggest_values':
-        return `Based on the following content, suggest values for these comparison properties. Return a JSON array with property, value, and confidence (0-1).
+        return `Fill in the "value" field for each property based on the content. Return the complete JSON array with all properties:
 
-Properties: ${context?.existingProperties?.map(p => `${p.name} (${p.type})`).join(', ')}
+${JSON.stringify(context?.existingProperties?.map(p => ({
+  property: p.name,
+  type: p.type,
+  value: null,
+  confidence: 0
+})), null, 2)}
+
+Rules:
+- Fill "value" with extracted data or leave as null if not found
+- For numeric types: use numbers only (e.g., 6 not "6kW")
+- For text types: use descriptive text
+- Set "confidence" 0.1-1.0 based on certainty
+- Return ALL properties, even if value is null
 
 Content:
-${content}
-
-Return only valid JSON in this format:
-[{"property": "Property Name", "value": "suggested value", "confidence": 0.8}]`;
+${content}`;
 
       case 'analyze_attachment':
         return `Analyze this ${context?.attachmentType || 'file'} content and extract key information that might be useful for comparison purposes:
@@ -181,14 +191,51 @@ Provide a structured analysis with key points that could be used as comparison p
     try {
       switch (type) {
         case 'extract_properties':
+        case 'extract_properties_batch':
         case 'suggest_values':
-          // Try to extract JSON from response
-          const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+          // Try multiple JSON extraction strategies
+          let parsed;
+          
+          // Strategy 1: JSON in code fences
+          let jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
           if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return { 
-              success: true, 
-              data: type === 'extract_properties' ? { properties: parsed } : { suggestions: parsed }
+            try {
+              parsed = JSON.parse(jsonMatch[1].trim());
+            } catch (e) {
+              console.warn('Failed to parse JSON from code fences:', e);
+            }
+          }
+          
+          // Strategy 2: Plain JSON array anywhere in text
+          if (!parsed) {
+            jsonMatch = responseText.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              try {
+                parsed = JSON.parse(jsonMatch[0]);
+              } catch (e) {
+                console.warn('Failed to parse JSON array:', e);
+              }
+            }
+          }
+          
+          // Strategy 3: Extract JSON between any brackets, ignoring surrounding text
+          if (!parsed) {
+            const bracketMatch = responseText.match(/\[([\s\S]*?)\]/); 
+            if (bracketMatch) {
+              try {
+                parsed = JSON.parse(`[${bracketMatch[1]}]`);
+              } catch (e) {
+                console.warn('Failed to parse bracketed content:', e);
+              }
+            }
+          }
+          
+          if (parsed) {
+            return {
+              success: true,
+              data: (type === 'extract_properties' || type === 'extract_properties_batch')
+                ? { properties: parsed }
+                : { suggestions: parsed }
             };
           }
           break;

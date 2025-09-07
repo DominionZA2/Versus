@@ -181,7 +181,7 @@ export default function ComparisonDetailPage() {
       ).join('\n');
       
       const analysisRequest = {
-        type: 'extract_properties' as const,
+        type: 'extract_properties_batch' as const,
         content: combinedContent,
         context: {
           comparisonName: comparison?.name,
