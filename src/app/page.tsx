@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { storage } from '@/lib/storage';
+import VersionInfo from '@/components/VersionInfo';
 
 export default function HomePage() {
   const router = useRouter();
@@ -92,6 +93,11 @@ export default function HomePage() {
         >
           Get Started
         </button>
+        
+        {/* Version Information */}
+        <div className="mt-12 flex justify-center">
+          <VersionInfo compact />
+        </div>
       </div>
     </div>
   );
