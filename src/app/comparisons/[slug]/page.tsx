@@ -282,7 +282,14 @@ export default function ComparisonDetailPage() {
 
     storage.saveComparison(updatedComparison);
     setComparison(updatedComparison);
-    setNewProperty({ name: '', type: 'text', higherIsBetter: true });
+    // Only clear the name, preserve type and higherIsBetter settings
+    setNewProperty(prev => ({ ...prev, name: '' }));
+    
+    // Focus the input for quick next entry
+    const nameInput = document.querySelector('input[placeholder*="Price, Quality"]') as HTMLInputElement;
+    if (nameInput) {
+      setTimeout(() => nameInput.focus(), 0);
+    }
   };
 
   const handleAddBulkProperties = () => {
@@ -927,6 +934,12 @@ export default function ComparisonDetailPage() {
                             onChange={(e) => {
                               setNewProperty(prev => ({ ...prev, name: e.target.value }));
                               if (newPropertyError) setNewPropertyError(''); // Clear error when user starts typing
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddProperty();
+                              }
                             }}
                             placeholder="e.g., Price, Quality, Ease of Use"
                             className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 ${

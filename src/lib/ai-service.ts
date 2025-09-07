@@ -47,7 +47,27 @@ class AnthropicService implements AIService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `API request failed: ${response.status}`);
+        // Pass through the raw API error message
+        let errorMessage = errorData.error || `API request failed: ${response.status}`;
+        
+        // Extract the original API error message from details
+        if (errorData.details) {
+          try {
+            const details = JSON.parse(errorData.details);
+            if (details.error && details.error.message) {
+              errorMessage = details.error.message;
+            } else if (typeof errorData.details === 'string') {
+              errorMessage = errorData.details;
+            }
+          } catch (e) {
+            // If details isn't JSON, use it as a string
+            if (typeof errorData.details === 'string') {
+              errorMessage = errorData.details;
+            }
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -217,7 +237,15 @@ class OpenAIService implements AIService {
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+        
+        // Pass through the raw OpenAI error message
+        if (errorData.error && errorData.error.message) {
+          errorMessage = errorData.error.message;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

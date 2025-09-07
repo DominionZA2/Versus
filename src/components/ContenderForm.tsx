@@ -345,6 +345,51 @@ ${content ? `Context: ${content}` : ''}`;
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const handleDownloadFile = (file: AttachedFile) => {
+    const link = document.createElement('a');
+    link.href = file.data;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleOpenFile = (file: AttachedFile) => {
+    // Create a blob from the data URL for better browser compatibility
+    try {
+      // Convert data URL to blob
+      const [header, base64Data] = file.data.split(',');
+      const mimeMatch = header.match(/data:([^;]+)/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+      
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: mimeType });
+      
+      // Create object URL and open it
+      const objectUrl = URL.createObjectURL(blob);
+      const newWindow = window.open(objectUrl, '_blank');
+      
+      // Clean up the object URL after a delay to allow the browser to load it
+      setTimeout(() => {
+        URL.revokeObjectURL(objectUrl);
+      }, 1000);
+      
+      // If window.open failed, fallback to direct data URL
+      if (!newWindow) {
+        window.location.href = file.data;
+      }
+    } catch (error) {
+      console.error('Error opening file:', error);
+      // Fallback to direct data URL approach
+      window.open(file.data, '_blank');
+    }
+  };
+
   const renderPropertyInput = (
     property: ComparisonProperty,
     value: string | number | undefined,
@@ -436,7 +481,9 @@ ${content ? `Context: ${content}` : ''}`;
               <h3 className="text-lg font-medium text-gray-200">Properties</h3>
               <div className="flex items-center gap-2">
                 {analysisError && (
-                  <span className="text-sm text-red-400">{analysisError}</span>
+                  <div className="bg-red-900/20 border border-red-800 rounded-md p-2 max-w-md">
+                    <span className="text-sm text-red-300">{analysisError}</span>
+                  </div>
                 )}
                 {showUndoOption && (
                   <button
@@ -520,17 +567,35 @@ ${content ? `Context: ${content}` : ''}`;
                 <h4 className="font-medium text-sm text-gray-300">Attached Files:</h4>
                 {formData.attachments.map((file) => (
                   <div key={file.id} className="flex items-center justify-between p-2 bg-gray-700 rounded-md">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-100">{file.name}</span>
+                    <div className="flex items-center space-x-2 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadFile(file)}
+                        className="text-sm font-medium text-blue-400 hover:text-blue-300 underline cursor-pointer transition-colors"
+                        title="Click to download file"
+                      >
+                        {file.name}
+                      </button>
                       <span className="text-xs text-gray-400">({formatFileSize(file.size)})</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFile(file.id)}
-                      className="text-red-400 hover:text-red-300 text-sm"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenFile(file)}
+                        className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors"
+                        title="Open in browser"
+                      >
+                        Open
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(file.id)}
+                        className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded transition-colors"
+                        title="Remove file"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
