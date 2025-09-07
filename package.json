@@ -1,12 +1,17 @@
 {
   "name": "versus",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "version:patch": "standard-version --release-as patch",
+    "version:minor": "standard-version --release-as minor",
+    "version:major": "standard-version --release-as major",
+    "version:auto": "standard-version",
+    "postversion": "git push --follow-tags origin master"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
@@ -21,6 +26,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
+    "standard-version": "^9.5.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
