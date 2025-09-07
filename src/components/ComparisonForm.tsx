@@ -25,30 +25,46 @@ export default function ComparisonForm({ mode, existingComparison }: ComparisonF
       return;
     }
 
+    // Check for duplicate names when adding or when editing with a different name
+    const trimmedName = formData.name.trim();
+    const existingComparisons = storage.getComparisons();
+    const isDuplicate = existingComparisons.some(comp => 
+      comp.name.toLowerCase() === trimmedName.toLowerCase() && 
+      (mode === 'add' || comp.id !== existingComparison?.id)
+    );
+    
+    if (isDuplicate) {
+      setError('A comparison with this name already exists. Please choose a different name.');
+      return;
+    }
+
     setError('');
 
     if (mode === 'add') {
       const comparison: Comparison = {
         id: storage.generateId(),
-        name: formData.name.trim(),
-        slug: storage.generateSlug(formData.name.trim()),
+        name: trimmedName,
+        slug: storage.generateSlug(trimmedName),
         properties: [],
         createdAt: new Date().toISOString()
       };
       
       storage.saveComparison(comparison);
+      
+      // Navigate directly to the newly created comparison
+      router.push(`/comparisons/${comparison.slug}`);
     } else if (mode === 'edit' && existingComparison) {
       const updatedComparison: Comparison = {
         ...existingComparison,
-        name: formData.name.trim(),
-        slug: storage.generateSlug(formData.name.trim())
+        name: trimmedName,
+        slug: storage.generateSlug(trimmedName)
       };
       
       storage.saveComparison(updatedComparison);
+      
+      // Navigate back to comparisons list after editing
+      router.push('/comparisons');
     }
-
-    // Navigate back to comparisons list
-    router.push('/comparisons');
   };
 
   const handleCancel = () => {
