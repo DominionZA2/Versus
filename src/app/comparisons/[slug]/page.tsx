@@ -57,6 +57,9 @@ export default function ComparisonDetailPage() {
   const [bulkPropertyType, setBulkPropertyType] = useState<'text' | 'number' | 'rating' | 'datetime'>('text');
   const [bulkHigherIsBetter, setBulkHigherIsBetter] = useState(true);
   const [bulkPropertyError, setBulkPropertyError] = useState('');
+  
+  // Add properties section collapse state
+  const [isAddPropertiesExpanded, setIsAddPropertiesExpanded] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -688,10 +691,14 @@ export default function ComparisonDetailPage() {
             <h1 className="text-3xl font-bold text-gray-100">{comparison.name}</h1>
             <div className="flex gap-3">
               <button
-                onClick={() => setIsManagingProperties(true)}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors"
+                onClick={() => setIsManagingProperties(!isManagingProperties)}
+                className={`font-semibold px-6 py-2 rounded-lg transition-colors ${
+                  isManagingProperties 
+                    ? 'bg-gray-500 hover:bg-gray-400 text-white' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                }`}
               >
-                Manage Properties
+                {isManagingProperties ? 'Close Properties' : 'Manage Properties'}
               </button>
               {!isAddingContender && !editingContender && (
                 <button
@@ -883,192 +890,203 @@ export default function ComparisonDetailPage() {
               </div>
             )}
 
+            {/* Collapsible Add Properties Section */}
             <div className="border-t border-gray-600 pt-6 mt-6">
-              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
-                <h3 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
-                  <span className="text-green-400 text-xl">+</span>
-                  Add New Property
-                </h3>
-                <div className="space-y-4">
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Property Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newProperty.name}
-                      onChange={(e) => {
-                        setNewProperty(prev => ({ ...prev, name: e.target.value }));
-                        if (newPropertyError) setNewPropertyError(''); // Clear error when user starts typing
-                      }}
-                      placeholder="e.g., Price, Quality, Ease of Use"
-                      className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 ${
-                        newPropertyError 
-                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
-                    />
-                    {newPropertyError && (
-                      <p className="mt-1 text-sm text-red-600">{newPropertyError}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Type
-                    </label>
-                    <select
-                      value={newProperty.type}
-                      onChange={(e) => setNewProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
-                      className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="text">Text</option>
-                      <option value="number">Number</option>
-                      <option value="rating">Rating (1-5)</option>
-                      <option value="datetime">Date & Time</option>
-                    </select>
-                  </div>
-                  <button
-                    onClick={handleAddProperty}
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
-                  >
-                    Add
-                  </button>
-                </div>
-                
-                {(newProperty.type === 'number' || newProperty.type === 'rating' || newProperty.type === 'datetime') && (
-                  <div className="flex items-center space-x-4 p-3 bg-gray-600 rounded-md">
-                    <label className="block text-sm font-medium text-gray-300">
-                      Comparison Direction:
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="higherIsBetter"
-                        checked={newProperty.higherIsBetter}
-                        onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: true }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-100">Higher is better</span>
-                      <span className="ml-1 text-xs text-gray-400">(Quality, Rating)</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="higherIsBetter"
-                        checked={!newProperty.higherIsBetter}
-                        onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: false }))}
-                        className="mr-2"
-                      />
-                      <span className="text-sm text-gray-100">Lower is better</span>
-                      <span className="ml-1 text-xs text-gray-400">(Price, Time)</span>
-                    </label>
-                  </div>
-                )}
-                
-                {/* Bulk Properties Section */}
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-600" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-gray-700 px-3 text-gray-400">OR</span>
-                  </div>
-                </div>
-                
-                <div className="bg-gray-600/30 border border-gray-600 rounded-lg p-4">
-                  <h4 className="text-md font-medium text-gray-100 mb-3 flex items-center gap-2">
-                    <span className="text-blue-400 text-lg">⚡</span>
-                    Bulk Add Properties
-                  </h4>
-                  <p className="text-gray-400 text-sm mb-4">
-                    Quickly create multiple properties at once by entering comma-separated names. 
-                    All properties will use the same type and settings.
-                  </p>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Property Names (comma-separated)
-                      </label>
-                      <textarea
-                        value={bulkProperties}
-                        onChange={(e) => {
-                          setBulkProperties(e.target.value);
-                          if (bulkPropertyError) setBulkPropertyError(''); // Clear error when user starts typing
-                        }}
-                        placeholder="e.g., Price, Quality, Features, Warranty, Support, Installation Time"
-                        className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${
-                          bulkPropertyError 
-                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
-                            : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
-                        }`}
-                        rows={3}
-                      />
-                      {bulkPropertyError && (
-                        <p className="mt-1 text-sm text-red-400">{bulkPropertyError}</p>
-                      )}
-                    </div>
-                    
-                    <div className="flex gap-4 items-end">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                          Type for All Properties
-                        </label>
-                        <select
-                          value={bulkPropertyType}
-                          onChange={(e) => setBulkPropertyType(e.target.value as 'text' | 'number' | 'rating' | 'datetime')}
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <button
+                onClick={() => setIsAddPropertiesExpanded(!isAddPropertiesExpanded)}
+                className={`flex items-center gap-2 text-gray-100 hover:text-white transition-colors w-full ${
+                  isAddPropertiesExpanded ? 'mb-4' : 'mb-0'
+                }`}
+              >
+                <span className={`transform transition-transform duration-200 ${
+                  isAddPropertiesExpanded ? 'rotate-90' : ''
+                }`}>
+                  ▶
+                </span>
+                <span className="text-green-400 text-lg">+</span>
+                <span className="text-lg font-medium">Add New Properties</span>
+              </button>
+              
+              {isAddPropertiesExpanded && (
+                <div className="space-y-6 animate-in slide-in-from-top-2 duration-200">
+                  {/* Individual Property Section */}
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                    <h4 className="text-md font-medium text-gray-100 mb-4 flex items-center gap-2">
+                      <span className="text-green-400 text-lg">+</span>
+                      Add Individual Property
+                    </h4>
+                    <div className="space-y-4">
+                      <div className="flex gap-3 items-end">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Property Name
+                          </label>
+                          <input
+                            type="text"
+                            value={newProperty.name}
+                            onChange={(e) => {
+                              setNewProperty(prev => ({ ...prev, name: e.target.value }));
+                              if (newPropertyError) setNewPropertyError(''); // Clear error when user starts typing
+                            }}
+                            placeholder="e.g., Price, Quality, Ease of Use"
+                            className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 ${
+                              newPropertyError 
+                                ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                                : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
+                            }`}
+                          />
+                          {newPropertyError && (
+                            <p className="mt-1 text-sm text-red-400">{newPropertyError}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Type
+                          </label>
+                          <select
+                            value={newProperty.type}
+                            onChange={(e) => setNewProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
+                            className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="rating">Rating (1-5)</option>
+                            <option value="datetime">Date & Time</option>
+                          </select>
+                        </div>
+                        <button
+                          onClick={handleAddProperty}
+                          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md transition-colors"
                         >
-                          <option value="text">Text</option>
-                          <option value="number">Number</option>
-                          <option value="rating">Rating (1-5)</option>
-                          <option value="datetime">Date & Time</option>
-                        </select>
+                          Add
+                        </button>
                       </div>
                       
-                      <button
-                        onClick={handleAddBulkProperties}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition-colors"
-                      >
-                        Create Properties
-                      </button>
+                      {(newProperty.type === 'number' || newProperty.type === 'rating' || newProperty.type === 'datetime') && (
+                        <div className="flex items-center space-x-4 p-3 bg-gray-600 rounded-md">
+                          <label className="block text-sm font-medium text-gray-300">
+                            Comparison Direction:
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="higherIsBetter"
+                              checked={newProperty.higherIsBetter}
+                              onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: true }))}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-100">Higher is better</span>
+                            <span className="ml-1 text-xs text-gray-400">(Quality, Rating)</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="higherIsBetter"
+                              checked={!newProperty.higherIsBetter}
+                              onChange={() => setNewProperty(prev => ({ ...prev, higherIsBetter: false }))}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-100">Lower is better</span>
+                            <span className="ml-1 text-xs text-gray-400">(Price, Time)</span>
+                          </label>
+                        </div>
+                      )}
                     </div>
+                  </div>
+                  
+                  {/* Bulk Properties Section */}
+                  <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                    <h4 className="text-md font-medium text-gray-100 mb-4 flex items-center gap-2">
+                      <span className="text-blue-400 text-lg">⚡</span>
+                      Bulk Add Properties
+                    </h4>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Quickly create multiple properties at once by entering comma-separated names. 
+                      All properties will use the same type and settings.
+                    </p>
                     
-                    {(bulkPropertyType === 'number' || bulkPropertyType === 'rating' || bulkPropertyType === 'datetime') && (
-                      <div className="flex items-center space-x-4 p-3 bg-gray-700 rounded-md">
-                        <label className="block text-sm font-medium text-gray-300">
-                          Comparison Direction for All:
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Property Names (comma-separated)
                         </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="bulkHigherIsBetter"
-                            checked={bulkHigherIsBetter}
-                            onChange={() => setBulkHigherIsBetter(true)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm text-gray-100">Higher is better</span>
-                          <span className="ml-1 text-xs text-gray-400">(Quality, Rating)</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="bulkHigherIsBetter"
-                            checked={!bulkHigherIsBetter}
-                            onChange={() => setBulkHigherIsBetter(false)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm text-gray-100">Lower is better</span>
-                          <span className="ml-1 text-xs text-gray-400">(Price, Time)</span>
-                        </label>
+                        <textarea
+                          value={bulkProperties}
+                          onChange={(e) => {
+                            setBulkProperties(e.target.value);
+                            if (bulkPropertyError) setBulkPropertyError(''); // Clear error when user starts typing
+                          }}
+                          placeholder="e.g., Price, Quality, Features, Warranty, Support, Installation Time"
+                          className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${
+                            bulkPropertyError 
+                              ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                              : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
+                          }`}
+                          rows={3}
+                        />
+                        {bulkPropertyError && (
+                          <p className="mt-1 text-sm text-red-400">{bulkPropertyError}</p>
+                        )}
                       </div>
-                    )}
+                      
+                      <div className="flex gap-4 items-end">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Type for All Properties
+                          </label>
+                          <select
+                            value={bulkPropertyType}
+                            onChange={(e) => setBulkPropertyType(e.target.value as 'text' | 'number' | 'rating' | 'datetime')}
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="text">Text</option>
+                            <option value="number">Number</option>
+                            <option value="rating">Rating (1-5)</option>
+                            <option value="datetime">Date & Time</option>
+                          </select>
+                        </div>
+                        
+                        <button
+                          onClick={handleAddBulkProperties}
+                          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition-colors"
+                        >
+                          Create Properties
+                        </button>
+                      </div>
+                      
+                      {(bulkPropertyType === 'number' || bulkPropertyType === 'rating' || bulkPropertyType === 'datetime') && (
+                        <div className="flex items-center space-x-4 p-3 bg-gray-700 rounded-md">
+                          <label className="block text-sm font-medium text-gray-300">
+                            Comparison Direction for All:
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="bulkHigherIsBetter"
+                              checked={bulkHigherIsBetter}
+                              onChange={() => setBulkHigherIsBetter(true)}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-100">Higher is better</span>
+                            <span className="ml-1 text-xs text-gray-400">(Quality, Rating)</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="bulkHigherIsBetter"
+                              checked={!bulkHigherIsBetter}
+                              onChange={() => setBulkHigherIsBetter(false)}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-100">Lower is better</span>
+                            <span className="ml-1 text-xs text-gray-400">(Price, Time)</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                
-                </div>
-              </div>
+              )}
             </div>
               </div>
             )}
@@ -1219,15 +1237,6 @@ export default function ComparisonDetailPage() {
                 )}
               </div>
             )}
-
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setIsManagingProperties(false)}
-                className="bg-gray-600 hover:bg-gray-500 text-gray-100 font-semibold px-4 py-2 rounded-md transition-colors"
-              >
-                Done
-              </button>
-            </div>
           </div>
         )}
 
