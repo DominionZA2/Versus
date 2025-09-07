@@ -532,13 +532,14 @@ export default function ComparisonDetailPage() {
 
 
   const getBestPropertyValues = () => {
-    const bestValues: Record<string, number | string> = {};
+    const bestValues: Record<string, { value: number | string; isUnique: boolean }> = {};
     
     comparison?.properties.forEach(property => {
       if (property.type === 'number' || property.type === 'rating') {
         const higherIsBetter = property.higherIsBetter !== false; // default to true
         let bestValue = higherIsBetter ? -Infinity : Infinity;
         
+        // Find the best value
         contenders.forEach(contender => {
           const value = contender.properties[property.key];
           if (typeof value === 'number' && value > 0) {
@@ -551,7 +552,16 @@ export default function ComparisonDetailPage() {
         });
         
         if (bestValue !== -Infinity && bestValue !== Infinity) {
-          bestValues[property.key] = bestValue;
+          // Count how many contenders have this best value
+          const countWithBestValue = contenders.filter(contender => {
+            const value = contender.properties[property.key];
+            return typeof value === 'number' && value === bestValue;
+          }).length;
+          
+          bestValues[property.key] = {
+            value: bestValue,
+            isUnique: countWithBestValue === 1
+          };
         }
       } else if (property.type === 'datetime') {
         const higherIsBetter = property.higherIsBetter !== false; // default to true (later dates are better)
@@ -575,7 +585,16 @@ export default function ComparisonDetailPage() {
         });
         
         if (bestValue) {
-          bestValues[property.key] = bestValue;
+          // Count how many contenders have this best value
+          const countWithBestValue = contenders.filter(contender => {
+            const value = contender.properties[property.key];
+            return typeof value === 'string' && value === bestValue;
+          }).length;
+          
+          bestValues[property.key] = {
+            value: bestValue,
+            isUnique: countWithBestValue === 1
+          };
         }
       }
     });
@@ -1278,7 +1297,7 @@ export default function ComparisonDetailPage() {
             <p className="text-gray-500">Add some options to start comparing!</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 grid-cols-2">
             {contenders.filter(c => editingContender !== c.id).map((contender) => (
               <div 
                 key={contender.id} 
@@ -1312,18 +1331,20 @@ export default function ComparisonDetailPage() {
                             const hasValue = value !== undefined && value !== '';
                             
                             const bestValues = getBestPropertyValues();
-                            const isBest = hasValue && ((property.type === 'number' || property.type === 'rating') && 
+                            const bestValueData = bestValues[property.key];
+                            const isBest = hasValue && bestValueData && bestValueData.isUnique && 
+                                         (((property.type === 'number' || property.type === 'rating') && 
                                          typeof value === 'number' && 
-                                         value === bestValues[property.key] &&
+                                         value === bestValueData.value &&
                                          value > 0) ||
                                          (property.type === 'datetime' &&
                                          typeof value === 'string' &&
-                                         value === bestValues[property.key]);
+                                         value === bestValueData.value));
                             
                             return (
                               <div key={property.key} className="flex justify-between items-center text-sm">
-                                <span className={`${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`}>{property.name}</span>
-                                <span className={`font-medium ${isBest ? 'text-green-400' : hasValue ? 'text-gray-100' : 'text-gray-500'}`}>
+                                <span className={`w-32 flex-shrink-0 truncate ${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`} title={property.name}>{property.name}</span>
+                                <span className={`font-medium text-right flex-1 ml-2 ${isBest ? 'text-green-400' : hasValue ? 'text-gray-100' : 'text-gray-500'}`}>
                                   {hasValue ? (
                                     property.type === 'rating' ? (
                                       <div className="flex items-center gap-1">
@@ -1360,14 +1381,14 @@ export default function ComparisonDetailPage() {
                     <div className="mb-4 pt-3 border-t border-gray-600">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-300">Attachments</span>
-                        <span className="font-medium text-gray-100">{contender.attachments?.length || 0}</span>
+                        <span className="font-medium text-gray-100 text-right">{contender.attachments?.length || 0}</span>
                       </div>
                     </div>
 
                     <div className="mb-4">
                       <div className="flex justify-between items-center text-sm mb-2">
                         <span className="text-gray-300">Links</span>
-                        <span className="font-medium text-gray-100">{contender.hyperlinks?.length || 0}</span>
+                        <span className="font-medium text-gray-100 text-right">{contender.hyperlinks?.length || 0}</span>
                       </div>
                       {contender.hyperlinks && contender.hyperlinks.length > 0 && (
                         <div className="space-y-1">
