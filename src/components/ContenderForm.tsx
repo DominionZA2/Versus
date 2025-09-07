@@ -54,6 +54,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
   const [previousProperties, setPreviousProperties] = useState<Record<string, string | number> | null>(null);
   const [showUndoOption, setShowUndoOption] = useState(false);
   const [showConfigPrompt, setShowConfigPrompt] = useState(false);
+  const [updatedProperties, setUpdatedProperties] = useState<Set<string>>(new Set());
   const analysisControllerRef = useRef<AbortController | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -299,10 +300,20 @@ ${content ? `Context: ${content}` : ''}`;
         }
 
         if (Object.keys(propertyValues).length > 0) {
+          // Track which properties were updated
+          const updatedKeys = new Set<string>();
+          Object.keys(propertyValues).forEach(key => {
+            // Only mark as updated if the value actually changed
+            if (formData.properties[key] !== propertyValues[key]) {
+              updatedKeys.add(key);
+            }
+          });
+          
           setFormData(prev => ({
             ...prev,
             properties: { ...prev.properties, ...propertyValues }
           }));
+          setUpdatedProperties(updatedKeys);
           setShowUndoOption(true);
         } else {
           setAnalysisError('No property values could be extracted from the content.');
@@ -334,7 +345,16 @@ ${content ? `Context: ${content}` : ''}`;
       }));
       setShowUndoOption(false);
       setPreviousProperties(null);
+      setUpdatedProperties(new Set()); // Clear visual indicators
     }
+  };
+
+  const handlePropertyFocus = (propertyKey: string) => {
+    setUpdatedProperties(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(propertyKey);
+      return newSet;
+    });
   };
 
   const formatFileSize = (bytes: number) => {
@@ -396,6 +416,11 @@ ${content ? `Context: ${content}` : ''}`;
     onChange: (key: string, value: string | number) => void
   ) => {
     const currentValue = value !== undefined ? value : '';
+    const isUpdated = updatedProperties.has(property.key);
+    const baseClasses = "w-full px-3 py-2 bg-gray-700 border text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500";
+    const updatedClasses = isUpdated 
+      ? "border-green-400 bg-green-900/20 shadow-lg shadow-green-500/20" 
+      : "border-gray-600";
 
     switch (property.type) {
       case 'text':
@@ -404,8 +429,9 @@ ${content ? `Context: ${content}` : ''}`;
             type="text"
             value={currentValue}
             onChange={(e) => onChange(property.key, e.target.value)}
+            onFocus={() => handlePropertyFocus(property.key)}
             placeholder={`Enter ${property.name.toLowerCase()}`}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`${baseClasses} ${updatedClasses}`}
           />
         );
       case 'number':
@@ -414,8 +440,9 @@ ${content ? `Context: ${content}` : ''}`;
             type="number"
             value={currentValue}
             onChange={(e) => onChange(property.key, parseFloat(e.target.value) || 0)}
+            onFocus={() => handlePropertyFocus(property.key)}
             placeholder={`Enter ${property.name.toLowerCase()}`}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`${baseClasses} ${updatedClasses}`}
           />
         );
       case 'rating':
@@ -425,7 +452,10 @@ ${content ? `Context: ${content}` : ''}`;
               <button
                 key={star}
                 type="button"
-                onClick={() => onChange(property.key, star)}
+                onClick={() => {
+                  onChange(property.key, star);
+                  handlePropertyFocus(property.key);
+                }}
                 className={`text-2xl ${
                   (currentValue as number) >= star ? 'text-yellow-400' : 'text-gray-300'
                 } hover:text-yellow-400 transition-colors`}
@@ -444,7 +474,8 @@ ${content ? `Context: ${content}` : ''}`;
             type="datetime-local"
             value={currentValue ? new Date(currentValue as string).toISOString().slice(0, 16) : ''}
             onChange={(e) => onChange(property.key, e.target.value ? new Date(e.target.value).toISOString() : '')}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onFocus={() => handlePropertyFocus(property.key)}
+            className={`${baseClasses} ${updatedClasses}`}
           />
         );
       default:
