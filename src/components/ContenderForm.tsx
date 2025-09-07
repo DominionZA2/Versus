@@ -309,12 +309,40 @@ ${content ? `Context: ${content}` : ''}`;
             }
           });
           
-          setFormData(prev => ({
-            ...prev,
-            properties: { ...prev.properties, ...propertyValues }
-          }));
+          // Update form data with new property values
+          const updatedFormData = {
+            ...formData,
+            properties: { ...formData.properties, ...propertyValues }
+          };
+          setFormData(updatedFormData);
           setUpdatedProperties(updatedKeys);
           setShowUndoOption(true);
+          
+          // Auto-save the contender with updated properties
+          const contender: Contender = {
+            id: mode === 'edit' ? existingContender!.id : storage.generateId(),
+            comparisonId: comparison.id,
+            name: updatedFormData.name.trim(),
+            description: updatedFormData.description.trim() || undefined,
+            pros: updatedFormData.pros.filter(p => p.trim()),
+            cons: updatedFormData.cons.filter(c => c.trim()),
+            properties: { ...updatedFormData.properties },
+            attachments: [...updatedFormData.attachments],
+            hyperlinks: updatedFormData.hyperlinks
+              .filter(url => url.trim())
+              .map(url => ({
+                id: storage.generateId(),
+                url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
+                addedAt: new Date().toISOString()
+              })),
+            createdAt: existingContender?.createdAt || new Date().toISOString()
+          };
+          
+          // Save to storage and update parent if this is a new contender
+          storage.saveContender(contender);
+          if (mode === 'add') {
+            onSubmit(contender); // Notify parent of new contender
+          }
         } else {
           setAnalysisError('No property values could be extracted from the content.');
         }
@@ -339,10 +367,40 @@ ${content ? `Context: ${content}` : ''}`;
 
   const handleUndoAnalysis = () => {
     if (previousProperties) {
-      setFormData(prev => ({
-        ...prev,
+      // Update form state with previous properties
+      const restoredFormData = {
+        ...formData,
         properties: { ...previousProperties }
-      }));
+      };
+      setFormData(restoredFormData);
+      
+      // Auto-save the restored state
+      const contender: Contender = {
+        id: mode === 'edit' ? existingContender!.id : storage.generateId(),
+        comparisonId: comparison.id,
+        name: restoredFormData.name.trim(),
+        description: restoredFormData.description.trim() || undefined,
+        pros: restoredFormData.pros.filter(p => p.trim()),
+        cons: restoredFormData.cons.filter(c => c.trim()),
+        properties: { ...restoredFormData.properties },
+        attachments: [...restoredFormData.attachments],
+        hyperlinks: restoredFormData.hyperlinks
+          .filter(url => url.trim())
+          .map(url => ({
+            id: storage.generateId(),
+            url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
+            addedAt: new Date().toISOString()
+          })),
+        createdAt: existingContender?.createdAt || new Date().toISOString()
+      };
+      
+      // Save restored state to storage
+      storage.saveContender(contender);
+      if (mode === 'add') {
+        onSubmit(contender); // Notify parent of new contender
+      }
+      
+      // Clear undo state
       setShowUndoOption(false);
       setPreviousProperties(null);
       setUpdatedProperties(new Set()); // Clear visual indicators
