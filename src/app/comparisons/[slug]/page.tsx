@@ -815,9 +815,13 @@ export default function ComparisonDetailPage() {
               </div>
             )}
 
-            <div className="border-t border-gray-600 pt-4">
-              <h3 className="text-lg font-medium text-gray-200 mb-3">Add New Property</h3>
-              <div className="space-y-4">
+            <div className="border-t border-gray-600 pt-6 mt-6">
+              <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
+                  <span className="text-green-400 text-xl">+</span>
+                  Add New Property
+                </h3>
+                <div className="space-y-4">
                 <div className="flex gap-3 items-end">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -893,6 +897,7 @@ export default function ComparisonDetailPage() {
                     </label>
                   </div>
                 )}
+                </div>
               </div>
             </div>
               </div>
