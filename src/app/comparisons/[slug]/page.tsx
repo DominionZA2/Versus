@@ -51,6 +51,12 @@ export default function ComparisonDetailPage() {
   const [newPropertyError, setNewPropertyError] = useState('');
   const [editPropertyError, setEditPropertyError] = useState('');
   const [draggedProperty, setDraggedProperty] = useState<string | null>(null);
+  
+  // Bulk properties state
+  const [bulkProperties, setBulkProperties] = useState<string>('');
+  const [bulkPropertyType, setBulkPropertyType] = useState<'text' | 'number' | 'rating' | 'datetime'>('text');
+  const [bulkHigherIsBetter, setBulkHigherIsBetter] = useState(true);
+  const [bulkPropertyError, setBulkPropertyError] = useState('');
 
   useEffect(() => {
     if (slug) {
@@ -274,6 +280,68 @@ export default function ComparisonDetailPage() {
     storage.saveComparison(updatedComparison);
     setComparison(updatedComparison);
     setNewProperty({ name: '', type: 'text', higherIsBetter: true });
+  };
+
+  const handleAddBulkProperties = () => {
+    if (!comparison) return;
+    
+    if (!bulkProperties.trim()) {
+      setBulkPropertyError('Please enter property names separated by commas');
+      return;
+    }
+    
+    // Parse comma-separated values
+    const propertyNames = bulkProperties
+      .split(',')
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (propertyNames.length === 0) {
+      setBulkPropertyError('Please enter valid property names');
+      return;
+    }
+    
+    // Check for duplicates with existing properties
+    const existingPropertyNames = comparison.properties.map(p => p.name.toLowerCase());
+    const duplicates = propertyNames.filter(name => 
+      existingPropertyNames.includes(name.toLowerCase())
+    );
+    
+    if (duplicates.length > 0) {
+      setBulkPropertyError(`Properties already exist: ${duplicates.join(', ')}`);
+      return;
+    }
+    
+    // Check for duplicates within the new properties
+    const lowercaseNames = propertyNames.map(name => name.toLowerCase());
+    const internalDuplicates = propertyNames.filter((name, index) => 
+      lowercaseNames.indexOf(name.toLowerCase()) !== index
+    );
+    
+    if (internalDuplicates.length > 0) {
+      setBulkPropertyError(`Duplicate property names: ${internalDuplicates.join(', ')}`);
+      return;
+    }
+    
+    // Clear any previous error
+    setBulkPropertyError('');
+    
+    // Create properties
+    const newProperties: ComparisonProperty[] = propertyNames.map(name => ({
+      key: storage.generateSlug(name),
+      name: name,
+      type: bulkPropertyType,
+      higherIsBetter: (bulkPropertyType === 'number' || bulkPropertyType === 'rating' || bulkPropertyType === 'datetime') ? bulkHigherIsBetter : undefined
+    }));
+    
+    const updatedComparison: Comparison = {
+      ...comparison,
+      properties: [...comparison.properties, ...newProperties]
+    };
+    
+    storage.saveComparison(updatedComparison);
+    setComparison(updatedComparison);
+    setBulkProperties(''); // Clear the input
   };
 
   const handleEditProperty = (property: ComparisonProperty) => {
@@ -897,6 +965,108 @@ export default function ComparisonDetailPage() {
                     </label>
                   </div>
                 )}
+                
+                {/* Bulk Properties Section */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-600" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-gray-700 px-3 text-gray-400">OR</span>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-600/30 border border-gray-600 rounded-lg p-4">
+                  <h4 className="text-md font-medium text-gray-100 mb-3 flex items-center gap-2">
+                    <span className="text-blue-400 text-lg">⚡</span>
+                    Bulk Add Properties
+                  </h4>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Quickly create multiple properties at once by entering comma-separated names. 
+                    All properties will use the same type and settings.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Property Names (comma-separated)
+                      </label>
+                      <textarea
+                        value={bulkProperties}
+                        onChange={(e) => {
+                          setBulkProperties(e.target.value);
+                          if (bulkPropertyError) setBulkPropertyError(''); // Clear error when user starts typing
+                        }}
+                        placeholder="e.g., Price, Quality, Features, Warranty, Support, Installation Time"
+                        className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${
+                          bulkPropertyError 
+                            ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
+                        }`}
+                        rows={3}
+                      />
+                      {bulkPropertyError && (
+                        <p className="mt-1 text-sm text-red-400">{bulkPropertyError}</p>
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-4 items-end">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Type for All Properties
+                        </label>
+                        <select
+                          value={bulkPropertyType}
+                          onChange={(e) => setBulkPropertyType(e.target.value as 'text' | 'number' | 'rating' | 'datetime')}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="rating">Rating (1-5)</option>
+                          <option value="datetime">Date & Time</option>
+                        </select>
+                      </div>
+                      
+                      <button
+                        onClick={handleAddBulkProperties}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-md transition-colors"
+                      >
+                        Create Properties
+                      </button>
+                    </div>
+                    
+                    {(bulkPropertyType === 'number' || bulkPropertyType === 'rating' || bulkPropertyType === 'datetime') && (
+                      <div className="flex items-center space-x-4 p-3 bg-gray-700 rounded-md">
+                        <label className="block text-sm font-medium text-gray-300">
+                          Comparison Direction for All:
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="bulkHigherIsBetter"
+                            checked={bulkHigherIsBetter}
+                            onChange={() => setBulkHigherIsBetter(true)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-100">Higher is better</span>
+                          <span className="ml-1 text-xs text-gray-400">(Quality, Rating)</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="radio"
+                            name="bulkHigherIsBetter"
+                            checked={!bulkHigherIsBetter}
+                            onChange={() => setBulkHigherIsBetter(false)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-100">Lower is better</span>
+                          <span className="ml-1 text-xs text-gray-400">(Price, Time)</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
                 </div>
               </div>
             </div>
@@ -1112,15 +1282,15 @@ export default function ComparisonDetailPage() {
                     </div>
 
 
-                    {comparison.properties.length > 0 && Object.keys(contender.properties).length > 0 && (
+                    {comparison.properties.length > 0 && (
                       <div className="mb-4">
                         <div className="space-y-2">
                           {comparison.properties.map((property) => {
                             const value = contender.properties[property.key];
-                            if (value === undefined || value === '') return null;
+                            const hasValue = value !== undefined && value !== '';
                             
                             const bestValues = getBestPropertyValues();
-                            const isBest = ((property.type === 'number' || property.type === 'rating') && 
+                            const isBest = hasValue && ((property.type === 'number' || property.type === 'rating') && 
                                          typeof value === 'number' && 
                                          value === bestValues[property.key] &&
                                          value > 0) ||
@@ -1131,27 +1301,31 @@ export default function ComparisonDetailPage() {
                             return (
                               <div key={property.key} className="flex justify-between items-center text-sm">
                                 <span className={`${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`}>{property.name}</span>
-                                <span className={`font-medium ${isBest ? 'text-green-400' : 'text-gray-100'}`}>
-                                  {property.type === 'rating' ? (
-                                    <div className="flex items-center gap-1">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                        <span
-                                          key={star}
-                                          className={`text-sm ${
-                                            (value as number) >= star 
-                                              ? isBest ? 'text-green-400' : 'text-yellow-400' 
-                                              : 'text-gray-300'
-                                          }`}
-                                        >
-                                          ★
-                                        </span>
-                                      ))}
-                                      <span className={`ml-1 ${isBest ? 'text-green-400' : 'text-gray-300'}`}>({value}/5)</span>
-                                    </div>
-                                  ) : property.type === 'datetime' ? (
-                                    new Date(value as string).toLocaleString()
+                                <span className={`font-medium ${isBest ? 'text-green-400' : hasValue ? 'text-gray-100' : 'text-gray-500'}`}>
+                                  {hasValue ? (
+                                    property.type === 'rating' ? (
+                                      <div className="flex items-center gap-1">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <span
+                                            key={star}
+                                            className={`text-sm ${
+                                              (value as number) >= star 
+                                                ? isBest ? 'text-green-400' : 'text-yellow-400' 
+                                                : 'text-gray-300'
+                                            }`}
+                                          >
+                                            ★
+                                          </span>
+                                        ))}
+                                        <span className={`ml-1 ${isBest ? 'text-green-400' : 'text-gray-300'}`}>({value}/5)</span>
+                                      </div>
+                                    ) : property.type === 'datetime' ? (
+                                      new Date(value as string).toLocaleString()
+                                    ) : (
+                                      value
+                                    )
                                   ) : (
-                                    value
+                                    <span className="text-gray-500 italic">—</span>
                                   )}
                                 </span>
                               </div>
