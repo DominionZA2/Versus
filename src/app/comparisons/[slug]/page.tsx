@@ -33,6 +33,7 @@ export default function ComparisonDetailPage() {
     rawJson?: string;
     error?: string;
   }>>([]);
+  const [cachedAnalysisData, setCachedAnalysisData] = useState<any>(null);
   const [isAiAvailable, setIsAiAvailable] = useState(false);
 
   const [customInstructions, setCustomInstructions] = useState<string>('');
@@ -57,6 +58,17 @@ export default function ComparisonDetailPage() {
       setComparison(comp);
       if (comp) {
         setContenders(storage.getContenders(comp.id));
+        
+        // Load cached analysis results if they exist
+        const cachedResults = localStorage.getItem(`analysis_cache_${comp.id}`);
+        if (cachedResults) {
+          try {
+            const parsedCache = JSON.parse(cachedResults);
+            setCachedAnalysisData(parsedCache);
+          } catch (error) {
+            console.error('Failed to parse cached analysis data:', error);
+          }
+        }
       }
     }
 
@@ -139,13 +151,14 @@ export default function ComparisonDetailPage() {
       });
     });
 
-    // Initialize analysis results
+    // Initialize analysis results and clear cached data display
     setAnalysisResults(filesToAnalyze.map(file => ({
       id: file.id,
       fileName: file.fileName,
       contenderName: file.contenderName,
       status: 'analyzing' as const
     })));
+    setCachedAnalysisData(null); // Clear cached display while analyzing
 
     try {
       // Check if the request was aborted
@@ -186,6 +199,12 @@ export default function ComparisonDetailPage() {
           data: result.data,
           rawJson: JSON.stringify(result.data, null, 2)
         })));
+        
+        // Cache the analysis results in localStorage
+        if (comparison) {
+          localStorage.setItem(`analysis_cache_${comparison.id}`, JSON.stringify(result.data));
+          setCachedAnalysisData(result.data);
+        }
       } else {
         // Mark all as error if the request failed
         setAnalysisResults(prev => prev.map(prevResult => ({
@@ -979,10 +998,28 @@ export default function ComparisonDetailPage() {
                   </div>
                 )}
                 
-                {/* Show unified results grid when analysis is complete */}
-                {!isAnalyzingFiles && analysisResults.length > 0 && analysisResults.some(r => r.status === 'completed') && (
+                {/* Show unified results grid when analysis is complete OR when cached data exists */}
+                {!isAnalyzingFiles && ((analysisResults.length > 0 && analysisResults.some(r => r.status === 'completed')) || cachedAnalysisData) && (
                   <div className="mt-4">
-                    <UnifiedAnalysisResultsGrid results={analysisResults} />
+                    {analysisResults.length > 0 && analysisResults.some(r => r.status === 'completed') ? (
+                      <UnifiedAnalysisResultsGrid results={analysisResults} />
+                    ) : cachedAnalysisData ? (
+                      <div>
+                        <div className="mb-3 flex items-center gap-2 text-sm text-blue-400">
+                          <span>📋</span>
+                          <span>Showing cached analysis results - click Analyse to refresh</span>
+                        </div>
+                        <UnifiedAnalysisResultsGrid 
+                          results={[{
+                            id: 'cached',
+                            fileName: 'Cached Data',
+                            contenderName: 'Previous Analysis',
+                            status: 'completed' as const,
+                            data: cachedAnalysisData
+                          }]} 
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 )}
                 
