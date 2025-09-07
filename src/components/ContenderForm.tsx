@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Comparison, Contender, ComparisonProperty, AttachedFile } from '@/types';
 import { storage } from '@/lib/storage';
+import { aiService } from '@/lib/ai-service';
+import AIConfigPrompt from './AIConfigPrompt';
 
 interface ContenderFormData {
   name: string;
@@ -45,6 +47,14 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
       attachments: []
     };
   });
+
+  // AI Analysis state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [previousProperties, setPreviousProperties] = useState<Record<string, string | number> | null>(null);
+  const [showUndoOption, setShowUndoOption] = useState(false);
+  const [showConfigPrompt, setShowConfigPrompt] = useState(false);
+  const analysisControllerRef = useRef<AbortController | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,6 +180,163 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
     }));
   };
 
+  const handleAIAnalysis = async () => {
+    // Check if AI is configured first
+    if (!aiService.isEnabled()) {
+      setShowConfigPrompt(true);
+      setAnalysisError(null);
+      return;
+    }
+
+    if (comparison.properties.length === 0) {
+      setAnalysisError('No properties defined for analysis.');
+      return;
+    }
+
+    // Check if there's any data to analyze
+    const hasData = formData.attachments.length > 0 || 
+                   formData.hyperlinks.some(link => link.trim()) ||
+                   formData.name.trim() ||
+                   formData.description.trim();
+    
+    if (!hasData) {
+      setAnalysisError('Please add some content (name, description, files, or links) before analysis.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    setShowUndoOption(false);
+
+    // Store current property values for undo functionality
+    setPreviousProperties({ ...formData.properties });
+
+    try {
+      // Build analysis content
+      let content = '';
+      
+      if (formData.name.trim()) content += `Name: ${formData.name.trim()}\n`;
+      if (formData.description.trim()) content += `Description: ${formData.description.trim()}\n`;
+      
+      const validLinks = formData.hyperlinks.filter(link => link.trim());
+      if (validLinks.length > 0) {
+        content += `\nLinks: ${validLinks.join(', ')}\n`;
+      }
+
+      // For now, use the first attachment as the primary analysis source
+      const primaryFile = formData.attachments[0];
+      const analysisContent = primaryFile ? primaryFile.data : content;
+
+      // Build prompt for property extraction
+      const propertyList = comparison.properties.map(p => {
+        let desc = `"${p.key}": ${p.name} (${p.type})`;
+        if (p.type === 'rating') desc += ' - Rate from 1-5';
+        else if (p.type === 'number' && p.higherIsBetter !== undefined) {
+          desc += p.higherIsBetter ? ' - Higher is better' : ' - Lower is better';
+        }
+        return desc;
+      }).join('\n');
+
+      const prompt = `Extract values for these specific properties from the content:
+
+${propertyList}
+
+Return ONLY valid JSON in this exact format:
+{
+  "propertyKey1": "value1",
+  "propertyKey2": 42,
+  "propertyKey3": "value3"
+}
+
+Rules:
+- Use exact property keys provided
+- For text: provide strings
+- For numbers: provide numeric values (no units)
+- For ratings: provide 1-5 numbers
+- For datetime: provide ISO date strings
+- Omit properties if value cannot be determined
+- NO explanations, just JSON
+
+${content ? `Context: ${content}` : ''}`;
+
+      const result = await aiService.analyze({
+        type: 'suggest_values',
+        content: analysisContent,
+        context: {
+          existingProperties: comparison.properties,
+          comparisonName: comparison.name,
+          contenderName: formData.name
+        }
+      });
+
+      if (result.success && result.data) {
+        // Parse the response and extract property values
+        let propertyValues: Record<string, string | number> = {};
+        
+        // Try to parse JSON response
+        try {
+          if (typeof result.data === 'string') {
+            propertyValues = JSON.parse(result.data);
+          } else if (result.data.suggestions) {
+            // Handle suggestions format
+            result.data.suggestions.forEach((suggestion: any) => {
+              const prop = comparison.properties.find(p => p.name === suggestion.property);
+              if (prop && suggestion.value !== undefined) {
+                propertyValues[prop.key] = suggestion.value;
+              }
+            });
+          } else if (result.data.properties) {
+            // Handle properties format from extract_properties
+            result.data.properties.forEach((property: any) => {
+              const prop = comparison.properties.find(p => p.name === property.name);
+              if (prop && property.value !== undefined) {
+                propertyValues[prop.key] = property.value;
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to parse AI response:', e);
+        }
+
+        if (Object.keys(propertyValues).length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            properties: { ...prev.properties, ...propertyValues }
+          }));
+          setShowUndoOption(true);
+        } else {
+          setAnalysisError('No property values could be extracted from the content.');
+        }
+      } else {
+        setAnalysisError(result.error || 'Analysis failed.');
+      }
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : 'Analysis failed.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleCancelAnalysis = () => {
+    if (analysisControllerRef.current) {
+      analysisControllerRef.current.abort();
+      analysisControllerRef.current = null;
+    }
+    setIsAnalyzing(false);
+    setAnalysisError(null);
+  };
+
+  const handleUndoAnalysis = () => {
+    if (previousProperties) {
+      setFormData(prev => ({
+        ...prev,
+        properties: { ...previousProperties }
+      }));
+      setShowUndoOption(false);
+      setPreviousProperties(null);
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -265,7 +432,51 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
 
         {comparison.properties.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-200 mb-3">Properties</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-medium text-gray-200">Properties</h3>
+              <div className="flex items-center gap-2">
+                {analysisError && (
+                  <span className="text-sm text-red-400">{analysisError}</span>
+                )}
+                {showUndoOption && (
+                  <button
+                    type="button"
+                    onClick={handleUndoAnalysis}
+                    className="text-xs bg-gray-600 hover:bg-gray-500 text-gray-100 px-2 py-1 rounded transition-colors"
+                  >
+                    ↶ Undo AI Changes
+                  </button>
+                )}
+                {isAnalyzing ? (
+                  <button
+                    type="button"
+                    onClick={handleCancelAnalysis}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1 rounded-md transition-colors"
+                  >
+                    <span className="animate-spin">⟳</span>
+                    Cancel Analysis
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleAIAnalysis}
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm px-3 py-1 rounded-md transition-all transform hover:scale-105 shadow-lg"
+                    title="Use AI to analyze attached files and links to automatically fill property values"
+                  >
+                    <span className="text-xs">⚡</span>
+                    AI Analyze
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {showConfigPrompt && (
+              <AIConfigPrompt 
+                className="mb-4" 
+                onDismiss={() => setShowConfigPrompt(false)}
+              />
+            )}
+            
             <div className="space-y-3">
               {comparison.properties.map((property) => (
                 <div key={property.key} className="flex items-center gap-3">
