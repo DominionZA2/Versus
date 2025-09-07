@@ -84,7 +84,16 @@ export default function AISettings({ onClose }: AISettingsProps) {
   };
 
   const handleTempApiKeyChange = (provider: 'anthropic' | 'openai', apiKey: string) => {
+    const previousApiKey = tempApiKeys[provider];
+    const hadNoPreviousKey = !previousApiKey || previousApiKey.trim() === '';
+    const hasNewKey = apiKey && apiKey.trim() !== '';
+    
     setTempApiKeys(prev => ({ ...prev, [provider]: apiKey }));
+    
+    // Auto-enable if there was no API key before and now there is one
+    if (hadNoPreviousKey && hasNewKey) {
+      setTempProviderEnabled(prev => ({ ...prev, [provider]: true }));
+    }
   };
 
   const handleTempProviderEnabledChange = (provider: 'anthropic' | 'openai', enabled: boolean) => {
