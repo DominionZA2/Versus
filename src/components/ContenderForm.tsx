@@ -213,20 +213,25 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
     setPreviousProperties({ ...formData.properties });
 
     try {
-      // Build analysis content
+      // Build unified analysis content including both attachments and hyperlinks
       let content = '';
       
-      if (formData.name.trim()) content += `Name: ${formData.name.trim()}\n`;
       if (formData.description.trim()) content += `Description: ${formData.description.trim()}\n`;
       
+      // Include hyperlinks as URLs for the AI to analyze
       const validLinks = formData.hyperlinks.filter(link => link.trim());
       if (validLinks.length > 0) {
-        content += `\nLinks: ${validLinks.join(', ')}\n`;
+        content += `Links to analyze: ${validLinks.join(', ')}\n`;
       }
 
-      // For now, use the first attachment as the primary analysis source
-      const primaryFile = formData.attachments[0];
-      const analysisContent = primaryFile ? primaryFile.data : content;
+      // Combine all attachments and context information for analysis
+      let analysisContent = content;
+      
+      // If we have attachments, use the first one as primary content but include context
+      if (formData.attachments.length > 0) {
+        const primaryFile = formData.attachments[0];
+        analysisContent = `${content}\n\n=== ATTACHED DOCUMENT ===\n${primaryFile.data}`;
+      }
 
       // Build prompt for property extraction
       const propertyList = comparison.properties.map(p => {
@@ -237,28 +242,6 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
         }
         return desc;
       }).join('\n');
-
-      const prompt = `Extract values for these specific properties from the content:
-
-${propertyList}
-
-Return ONLY valid JSON in this exact format:
-{
-  "propertyKey1": "value1",
-  "propertyKey2": 42,
-  "propertyKey3": "value3"
-}
-
-Rules:
-- Use exact property keys provided
-- For text: provide strings
-- For numbers: provide numeric values (no units)
-- For ratings: provide 1-5 numbers
-- For datetime: provide ISO date strings
-- Omit properties if value cannot be determined
-- NO explanations, just JSON
-
-${content ? `Context: ${content}` : ''}`;
 
       const result = await aiService.analyze({
         type: 'suggest_values',

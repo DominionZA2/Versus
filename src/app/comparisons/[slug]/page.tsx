@@ -127,10 +127,13 @@ export default function ComparisonDetailPage() {
       return;
     }
 
-    // Check if we have any contenders with files
-    const contendersWithFiles = contenders.filter(c => c.attachments && c.attachments.length > 0);
-    if (contendersWithFiles.length === 0) {
-      alert('No files found to analyze. Please attach files to a contender first.');
+    // Check if we have any contenders with files or hyperlinks to analyze
+    const contendersWithContent = contenders.filter(c => 
+      (c.attachments && c.attachments.length > 0) || 
+      (c.hyperlinks && c.hyperlinks.length > 0)
+    );
+    if (contendersWithContent.length === 0) {
+      alert('No files or hyperlinks found to analyze. Please attach files or add hyperlinks to a contender first.');
       return;
     }
 
@@ -139,8 +142,8 @@ export default function ComparisonDetailPage() {
     setAnalysisAbortController(abortController);
     setIsAnalyzingFiles(true);
 
-    // Collect all files to analyze
-    const filesToAnalyze: Array<{
+    // Collect all files and hyperlinks to analyze
+    const contentToAnalyze: Array<{
       id: string;
       fileName: string;
       contenderName: string;
@@ -148,9 +151,10 @@ export default function ComparisonDetailPage() {
       fileType: string;
     }> = [];
 
-    contendersWithFiles.forEach(contender => {
+    contendersWithContent.forEach(contender => {
+      // Add attached files
       contender.attachments?.forEach(file => {
-        filesToAnalyze.push({
+        contentToAnalyze.push({
           id: `${contender.id}-${file.name}`,
           fileName: file.name,
           contenderName: contender.name,
@@ -158,13 +162,25 @@ export default function ComparisonDetailPage() {
           fileType: file.type
         });
       });
+      
+      // Add hyperlinks as content to analyze
+      if (contender.hyperlinks && contender.hyperlinks.length > 0) {
+        const hyperlinksContent = `Links from ${contender.name}:\n${contender.hyperlinks.map(h => h.url).join('\n')}`;
+        contentToAnalyze.push({
+          id: `${contender.id}-hyperlinks`,
+          fileName: `Hyperlinks (${contender.hyperlinks.length} links)`,
+          contenderName: contender.name,
+          fileData: hyperlinksContent,
+          fileType: 'text/hyperlinks'
+        });
+      }
     });
 
     // Initialize analysis results and clear cached data display
-    setAnalysisResults(filesToAnalyze.map(file => ({
-      id: file.id,
-      fileName: file.fileName,
-      contenderName: file.contenderName,
+    setAnalysisResults(contentToAnalyze.map(content => ({
+      id: content.id,
+      fileName: content.fileName,
+      contenderName: content.contenderName,
       status: 'analyzing' as const
     })));
     setCachedAnalysisData(null); // Clear cached display while analyzing
@@ -175,9 +191,9 @@ export default function ComparisonDetailPage() {
         return;
       }
 
-      // Combine all files into a single request with structured content
-      const combinedContent = filesToAnalyze.map(file => 
-        `=== FILE: ${file.fileName} (${file.contenderName}) ===\n${file.fileData}\n`
+      // Combine all content (files and hyperlinks) into a single request with structured content
+      const combinedContent = contentToAnalyze.map(content => 
+        `=== ${content.fileType === 'text/hyperlinks' ? 'HYPERLINKS' : 'FILE'}: ${content.fileName} (${content.contenderName}) ===\n${content.fileData}\n`
       ).join('\n');
       
       const analysisRequest = {
@@ -186,12 +202,12 @@ export default function ComparisonDetailPage() {
         context: {
           comparisonName: comparison?.name,
           customInstructions: customInstructions.trim() || undefined,
-          fileCount: filesToAnalyze.length,
-          fileNames: filesToAnalyze.map(f => `${f.fileName} (${f.contenderName})`).join(', ')
+          fileCount: contentToAnalyze.length,
+          fileNames: contentToAnalyze.map(c => `${c.fileName} (${c.contenderName})`).join(', ')
         }
       };
 
-      console.log(`Analyzing ${filesToAnalyze.length} files in single request`);
+      console.log(`Analyzing ${contentToAnalyze.length} content items (files + hyperlinks) in single request`);
 
       const result = await aiService.analyze(analysisRequest);
       
@@ -1185,10 +1201,10 @@ export default function ComparisonDetailPage() {
                     <div>
                       <h4 className="text-blue-400 font-medium mb-1">What does Analyse do?</h4>
                       <p className="text-blue-200 text-sm">
-                        The AI will examine attached files and scrape related hyperlinks to automatically extract 
+                        The AI will examine attached files and analyze hyperlinks from all contenders to automatically extract 
                         configuration properties, technical specifications, and key values that can be used for 
                         comparison. This saves you time by automatically populating property values from documents 
-                        like quotes, specifications, configuration files, and web pages.
+                        like quotes, specifications, configuration files, and the URLs you've added to contenders.
                       </p>
                     </div>
                   </div>
@@ -1385,28 +1401,11 @@ export default function ComparisonDetailPage() {
                       </div>
                     </div>
 
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center text-sm mb-2">
+                    <div className="mb-2">
+                      <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-300">Links</span>
                         <span className="font-medium text-gray-100 text-right">{contender.hyperlinks?.length || 0}</span>
                       </div>
-                      {contender.hyperlinks && contender.hyperlinks.length > 0 && (
-                        <div className="space-y-1">
-                          {contender.hyperlinks.map((hyperlink) => (
-                            <div key={hyperlink.id}>
-                              <a
-                                href={hyperlink.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block text-sm text-blue-400 hover:text-blue-300 underline truncate"
-                                title={hyperlink.url}
-                              >
-                                {hyperlink.url}
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     {(contender.pros.length > 0 || contender.cons.length > 0) && (
