@@ -1398,7 +1398,8 @@ export default function ComparisonDetailPage() {
                                 href={hyperlink.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-sm text-blue-400 hover:text-blue-300 underline break-all"
+                                className="block text-sm text-blue-400 hover:text-blue-300 underline truncate"
+                                title={hyperlink.url}
                               >
                                 {hyperlink.url}
                               </a>
