@@ -209,6 +209,32 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
     setAnalysisError(null);
     setShowUndoOption(false);
 
+    // Save current state before analysis to preserve any user changes
+    const preAnalysisContender: Contender = {
+      id: mode === 'edit' ? existingContender!.id : storage.generateId(),
+      comparisonId: comparison.id,
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+      pros: formData.pros.filter(p => p.trim()),
+      cons: formData.cons.filter(c => c.trim()),
+      properties: { ...formData.properties },
+      attachments: [...formData.attachments],
+      hyperlinks: formData.hyperlinks
+        .filter(url => url.trim())
+        .map(url => ({
+          id: storage.generateId(),
+          url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
+          addedAt: new Date().toISOString()
+        })),
+      createdAt: existingContender?.createdAt || new Date().toISOString()
+    };
+    
+    // Save to storage before analysis
+    storage.saveContender(preAnalysisContender);
+    if (mode === 'add') {
+      onSubmit(preAnalysisContender); // Notify parent of new contender
+    }
+
     // Store current property values for undo functionality
     setPreviousProperties({ ...formData.properties });
 
@@ -265,7 +291,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
             // Handle suggestions format
             result.data.suggestions.forEach((suggestion: any) => {
               const prop = comparison.properties.find(p => p.name === suggestion.property);
-              if (prop && suggestion.value !== undefined) {
+              if (prop && suggestion.value !== undefined && suggestion.value !== null) {
                 propertyValues[prop.key] = suggestion.value;
               }
             });
@@ -273,7 +299,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
             // Handle properties format from extract_properties
             result.data.properties.forEach((property: any) => {
               const prop = comparison.properties.find(p => p.name === property.name);
-              if (prop && property.value !== undefined) {
+              if (prop && property.value !== undefined && property.value !== null) {
                 propertyValues[prop.key] = property.value;
               }
             });
@@ -387,6 +413,59 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
       setShowUndoOption(false);
       setPreviousProperties(null);
       setUpdatedProperties(new Set()); // Clear visual indicators
+    }
+  };
+
+  const handleUndoProperty = (propertyKey: string) => {
+    if (previousProperties && previousProperties.hasOwnProperty(propertyKey)) {
+      // Restore just this property to its previous value
+      const updatedFormData = {
+        ...formData,
+        properties: {
+          ...formData.properties,
+          [propertyKey]: previousProperties[propertyKey]
+        }
+      };
+      setFormData(updatedFormData);
+      
+      // Remove this property from the updated set
+      setUpdatedProperties(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(propertyKey);
+        return newSet;
+      });
+      
+      // Auto-save the updated state
+      const contender: Contender = {
+        id: mode === 'edit' ? existingContender!.id : storage.generateId(),
+        comparisonId: comparison.id,
+        name: updatedFormData.name.trim(),
+        description: updatedFormData.description.trim() || undefined,
+        pros: updatedFormData.pros.filter(p => p.trim()),
+        cons: updatedFormData.cons.filter(c => c.trim()),
+        properties: { ...updatedFormData.properties },
+        attachments: [...updatedFormData.attachments],
+        hyperlinks: updatedFormData.hyperlinks
+          .filter(url => url.trim())
+          .map(url => ({
+            id: storage.generateId(),
+            url: url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`,
+            addedAt: new Date().toISOString()
+          })),
+        createdAt: existingContender?.createdAt || new Date().toISOString()
+      };
+      
+      // Save updated state to storage
+      storage.saveContender(contender);
+      if (mode === 'add') {
+        onSubmit(contender); // Notify parent of new contender
+      }
+      
+      // If no properties are left to undo, hide the global undo option
+      if (updatedProperties.size === 1) { // Will be 0 after removal above
+        setShowUndoOption(false);
+        setPreviousProperties(null);
+      }
     }
   };
 
@@ -612,6 +691,17 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                       }))
                     )}
                   </div>
+                  {updatedProperties.has(property.key) && previousProperties && (
+                    <button
+                      type="button"
+                      onClick={() => handleUndoProperty(property.key)}
+                      className="text-xs bg-amber-600 hover:bg-amber-500 text-white px-2 py-1 rounded transition-colors flex items-center gap-1 flex-shrink-0"
+                      title={`Undo AI change for ${property.name}`}
+                    >
+                      <span className="text-xs">↶</span>
+                      Undo
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
