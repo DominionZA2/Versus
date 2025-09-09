@@ -26,6 +26,12 @@ interface ContenderFormProps {
 
 export default function ContenderForm({ comparison, mode, existingContender, onSubmit, onCancel }: ContenderFormProps) {
   const [formData, setFormData] = useState<ContenderFormData>(() => {
+    // Initialize properties with default values for all comparison properties
+    const initialProperties: Record<string, string | number> = {};
+    comparison.properties.forEach(prop => {
+      initialProperties[prop.key] = '';
+    });
+
     if (mode === 'edit' && existingContender) {
       return {
         name: existingContender.name,
@@ -33,7 +39,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
         pros: [...existingContender.pros, ''],
         cons: [...existingContender.cons, ''],
         hyperlinks: [...(existingContender.hyperlinks || []).map(h => h.url), ''],
-        properties: { ...existingContender.properties },
+        properties: { ...initialProperties, ...existingContender.properties },
         attachments: [...(existingContender.attachments || [])]
       };
     }
@@ -43,7 +49,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
       pros: [''],
       cons: [''],
       hyperlinks: [''],
-      properties: {},
+      properties: initialProperties,
       attachments: []
     };
   });
@@ -537,7 +543,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
     value: string | number | undefined,
     onChange: (key: string, value: string | number) => void
   ) => {
-    const currentValue = value !== undefined ? value : '';
+    const currentValue = value !== undefined && value !== null ? value : '';
     const isUpdated = updatedProperties.has(property.key);
     const baseClasses = "w-full px-3 py-2 bg-gray-700 border text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500";
     const updatedClasses = isUpdated 
@@ -591,10 +597,13 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
           </div>
         );
       case 'datetime':
+        const datetimeValue = currentValue && currentValue !== '' 
+          ? new Date(currentValue as string).toISOString().slice(0, 16) 
+          : '';
         return (
           <input
             type="datetime-local"
-            value={currentValue ? new Date(currentValue as string).toISOString().slice(0, 16) : ''}
+            value={datetimeValue}
             onChange={(e) => onChange(property.key, e.target.value ? new Date(e.target.value).toISOString() : '')}
             onFocus={() => handlePropertyFocus(property.key)}
             className={`${baseClasses} ${updatedClasses}`}
