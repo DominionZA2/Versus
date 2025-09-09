@@ -3,12 +3,22 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { provider, apiKey, model, prompt, maxTokens = 1000, file } = body;
+    const { provider, apiKey, baseUrl, model, prompt, maxTokens = 1000, file } = body;
 
-    console.log('API Request:', { provider, model, hasApiKey: !!apiKey, prompt: prompt?.substring(0, 50) });
+    console.log('API Request:', { provider, model, hasApiKey: !!apiKey, baseUrl, prompt: prompt?.substring(0, 50) });
 
-    if (!provider || !apiKey) {
-      return NextResponse.json({ error: 'Provider and API key required' }, { status: 400 });
+    if (!provider) {
+      return NextResponse.json({ error: 'Provider required' }, { status: 400 });
+    }
+
+    // API key is required for anthropic and openai, but not for ollama
+    if ((provider === 'anthropic' || provider === 'openai') && !apiKey) {
+      return NextResponse.json({ error: 'API key required for this provider' }, { status: 400 });
+    }
+
+    // Base URL is required for ollama
+    if (provider === 'ollama' && !baseUrl) {
+      return NextResponse.json({ error: 'Base URL required for Ollama' }, { status: 400 });
     }
 
     let apiUrl: string;
@@ -77,6 +87,16 @@ export async function POST(request: NextRequest) {
       };
       requestBody = {
         model: model || 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens
+      };
+    } else if (provider === 'ollama') {
+      apiUrl = `${baseUrl}/v1/chat/completions`;
+      headers = {
+        'Content-Type': 'application/json'
+      };
+      requestBody = {
+        model: model || 'qwen3:8b',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: maxTokens
       };

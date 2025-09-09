@@ -25,6 +25,7 @@ class AnthropicService implements AIService {
       const requestBody = isFile ? {
         provider: 'anthropic',
         apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl,
         model: this.config.model,
         prompt,
         maxTokens: 2000,
@@ -32,6 +33,7 @@ class AnthropicService implements AIService {
       } : {
         provider: 'anthropic',
         apiKey: this.config.apiKey,
+        baseUrl: this.config.baseUrl,
         model: this.config.model,
         prompt,
         maxTokens: 1000
@@ -93,6 +95,7 @@ class AnthropicService implements AIService {
         body: JSON.stringify({
           provider: 'anthropic',
           apiKey: this.config.apiKey,
+          baseUrl: this.config.baseUrl,
           model: this.config.model,
           prompt: 'Test connection',
           maxTokens: 10
@@ -276,16 +279,18 @@ class OpenAIService implements AIService {
     try {
       const prompt = this.buildPrompt(request);
       
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: this.config.model || 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 1000
+          provider: 'openai',
+          apiKey: this.config.apiKey,
+          baseUrl: this.config.baseUrl,
+          model: this.config.model,
+          prompt,
+          maxTokens: 1000
         })
       });
 
@@ -310,16 +315,103 @@ class OpenAIService implements AIService {
 
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: this.config.model || 'gpt-4o-mini',
-          messages: [{ role: 'user', content: 'Test' }],
-          max_tokens: 5
+          provider: 'openai',
+          apiKey: this.config.apiKey,
+          baseUrl: this.config.baseUrl,
+          model: this.config.model,
+          prompt: 'Test',
+          maxTokens: 5
+        })
+      });
+
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  private buildPrompt(request: AIAnalysisRequest): string {
+    // Same prompt building logic as Anthropic
+    const anthropicService = new AnthropicService(this.config);
+    return (anthropicService as any).buildPrompt(request);
+  }
+
+  private parseResponse(responseText: string, type: string): AIAnalysisResponse {
+    // Same parsing logic as Anthropic
+    const anthropicService = new AnthropicService(this.config);
+    return (anthropicService as any).parseResponse(responseText, type);
+  }
+}
+
+class OllamaService implements AIService {
+  private config: AIProviderConfig;
+
+  constructor(config: AIProviderConfig) {
+    this.config = config;
+  }
+
+  async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
+    if (!this.config.enabled || !this.config.baseUrl) {
+      return { success: false, error: 'Ollama service not configured' };
+    }
+
+    try {
+      const prompt = this.buildPrompt(request);
+      
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider: 'ollama',
+          baseUrl: this.config.baseUrl,
+          model: this.config.model,
+          prompt,
+          maxTokens: 1000
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+        
+        // Pass through the raw Ollama error message
+        if (errorData.error && errorData.error.message) {
+          errorMessage = errorData.error.message;
+        } else if (errorData.details) {
+          errorMessage = errorData.details;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      return this.parseResponse(data.choices[0].message.content, request.type);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider: 'ollama',
+          baseUrl: this.config.baseUrl,
+          model: this.config.model,
+          prompt: 'Test',
+          maxTokens: 5
         })
       });
 
@@ -388,7 +480,19 @@ export class AIServiceManager {
     }
 
     const activeProviderConfig = this.config.providers.find(p => p.provider === this.config!.activeProvider);
-    if (!activeProviderConfig || !activeProviderConfig.enabled || !activeProviderConfig.apiKey) {
+    if (!activeProviderConfig || !activeProviderConfig.enabled) {
+      this.activeService = null;
+      return;
+    }
+
+    // API key is required for anthropic and openai, but not for ollama
+    if ((activeProviderConfig.provider === 'anthropic' || activeProviderConfig.provider === 'openai') && !activeProviderConfig.apiKey) {
+      this.activeService = null;
+      return;
+    }
+
+    // Base URL is required for ollama
+    if (activeProviderConfig.provider === 'ollama' && !activeProviderConfig.baseUrl) {
       this.activeService = null;
       return;
     }
@@ -399,6 +503,9 @@ export class AIServiceManager {
         break;
       case 'openai':
         this.activeService = new OpenAIService(activeProviderConfig);
+        break;
+      case 'ollama':
+        this.activeService = new OllamaService(activeProviderConfig);
         break;
       default:
         this.activeService = null;
@@ -429,7 +536,7 @@ export class AIServiceManager {
     this.saveConfig();
   }
 
-  public setActiveProvider(provider: 'anthropic' | 'openai' | 'none'): void {
+  public setActiveProvider(provider: 'anthropic' | 'openai' | 'ollama' | 'none'): void {
     if (!this.config) return;
 
     this.config.activeProvider = provider;
@@ -438,7 +545,7 @@ export class AIServiceManager {
   }
 
 
-  public getProviderConfig(provider: 'anthropic' | 'openai'): AIProviderConfig | null {
+  public getProviderConfig(provider: 'anthropic' | 'openai' | 'ollama'): AIProviderConfig | null {
     if (!this.config) return null;
     return this.config.providers.find(p => p.provider === provider) || null;
   }
@@ -459,7 +566,7 @@ export class AIServiceManager {
     return this.activeService.analyze(request);
   }
 
-  public async testConnection(provider?: 'anthropic' | 'openai'): Promise<boolean> {
+  public async testConnection(provider?: 'anthropic' | 'openai' | 'ollama'): Promise<boolean> {
     if (provider) {
       const providerConfig = this.getProviderConfig(provider);
       if (!providerConfig) return false;
@@ -471,6 +578,9 @@ export class AIServiceManager {
           break;
         case 'openai':
           service = new OpenAIService(providerConfig);
+          break;
+        case 'ollama':
+          service = new OllamaService(providerConfig);
           break;
         default:
           return false;

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AIConfig, AIProviderConfig } from '@/types/ai';
 import { aiService } from '@/lib/ai-service';
 
@@ -14,11 +14,13 @@ export default function AISettings({ onClose }: AISettingsProps) {
     activeProvider: 'none'
   });
   const [defaultModel, setDefaultModel] = useState<string>('');
-  const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
-  const [tempApiKeys, setTempApiKeys] = useState<Record<'anthropic' | 'openai', string>>({ anthropic: '', openai: '' });
+  const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: '' });
+  const [tempApiKeys, setTempApiKeys] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: '' });
+  const [baseUrls, setBaseUrls] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: 'http://localhost:11434' });
+  const [tempBaseUrls, setTempBaseUrls] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: 'http://localhost:11434' });
   const [tempDefaultModel, setTempDefaultModel] = useState<string>('');
-  const [providerEnabled, setProviderEnabled] = useState<Record<'anthropic' | 'openai', boolean>>({ anthropic: false, openai: false });
-  const [tempProviderEnabled, setTempProviderEnabled] = useState<Record<'anthropic' | 'openai', boolean>>({ anthropic: false, openai: false });
+  const [providerEnabled, setProviderEnabled] = useState<Record<'anthropic' | 'openai' | 'ollama', boolean>>({ anthropic: false, openai: false, ollama: false });
+  const [tempProviderEnabled, setTempProviderEnabled] = useState<Record<'anthropic' | 'openai' | 'ollama', boolean>>({ anthropic: false, openai: false, ollama: false });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -26,6 +28,8 @@ export default function AISettings({ onClose }: AISettingsProps) {
   const [connectionStatus, setConnectionStatus] = useState<Record<string, 'idle' | 'success' | 'error'>>({});
   const [testError, setTestError] = useState<Record<string, string | null>>({});
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
+  const [ollamaModels, setOllamaModels] = useState<Array<{name: string; size: number; family: string}>>([]);
+  const [isLoadingOllamaModels, setIsLoadingOllamaModels] = useState(false);
 
   useEffect(() => {
     const savedConfig = aiService.getConfig();
@@ -39,17 +43,50 @@ export default function AISettings({ onClose }: AISettingsProps) {
           setTempDefaultModel(activeProviderConfig.model);
         }
       }
-      // Load API keys and enabled state from all providers
+      // Load API keys, base URLs and enabled state from all providers
       savedConfig.providers.forEach(p => {
-        setApiKeys(prev => ({ ...prev, [p.provider]: p.apiKey }));
-        setTempApiKeys(prev => ({ ...prev, [p.provider]: p.apiKey }));
+        if (p.apiKey) {
+          setApiKeys(prev => ({ ...prev, [p.provider]: p.apiKey! }));
+          setTempApiKeys(prev => ({ ...prev, [p.provider]: p.apiKey! }));
+        }
+        if (p.baseUrl) {
+          setBaseUrls(prev => ({ ...prev, [p.provider]: p.baseUrl! }));
+          setTempBaseUrls(prev => ({ ...prev, [p.provider]: p.baseUrl! }));
+        }
         setProviderEnabled(prev => ({ ...prev, [p.provider]: p.enabled }));
         setTempProviderEnabled(prev => ({ ...prev, [p.provider]: p.enabled }));
       });
     }
   }, []);
 
-  const getAllModels = () => {
+  // Fetch Ollama models when component loads if baseUrl is already set
+  useEffect(() => {
+    if (tempBaseUrls.ollama && tempBaseUrls.ollama.trim() !== '') {
+      fetchOllamaModels(tempBaseUrls.ollama);
+      // Also ensure Ollama is enabled when we have a valid URL
+      if (!tempProviderEnabled.ollama) {
+        setTempProviderEnabled(prev => ({ ...prev, ollama: true }));
+      }
+    }
+  }, [tempBaseUrls.ollama]);
+
+  // Also fetch models on initial load if we have an Ollama provider configured
+  useEffect(() => {
+    const ollamaProvider = config.providers.find(p => p.provider === 'ollama');
+    if (ollamaProvider && ollamaProvider.baseUrl && ollamaProvider.enabled) {
+      fetchOllamaModels(ollamaProvider.baseUrl);
+    }
+  }, [config.providers]);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const getAllModels = useMemo(() => {
     const allModels = [
       { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (Latest, Recommended)', provider: 'anthropic' as const },
       { value: 'claude-3-7-sonnet-20250219', label: 'Claude 3.7 Sonnet (Hybrid Reasoning)', provider: 'anthropic' as const },
@@ -66,50 +103,109 @@ export default function AISettings({ onClose }: AISettingsProps) {
       { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Powerful)', provider: 'openai' as const }
     ];
 
-    // Filter models based on available API keys AND enabled state (use temp values for immediate UI feedback)
-    const availableModels = allModels.filter(model => {
-      const hasApiKey = tempApiKeys[model.provider] && tempApiKeys[model.provider].trim() !== '';
+    // Add dynamic Ollama models
+    const ollamaModelOptions = ollamaModels.map(model => ({
+      value: model.name,
+      label: `${model.name} (${formatFileSize(model.size)}, Local)`,
+      provider: 'ollama' as const
+    }));
+
+    const allModelsWithOllama = [...allModels, ...ollamaModelOptions];
+
+    // Filter models based on available credentials AND enabled state (use temp values for immediate UI feedback)
+    const availableModels = allModelsWithOllama.filter(model => {
       const isEnabled = tempProviderEnabled[model.provider];
-      return hasApiKey && isEnabled;
+      if (!isEnabled) return false;
+      
+      // For ollama, check baseUrl; for others, check apiKey
+      if (model.provider === 'ollama') {
+        return tempBaseUrls[model.provider] && tempBaseUrls[model.provider].trim() !== '';
+      } else {
+        return tempApiKeys[model.provider] && tempApiKeys[model.provider].trim() !== '';
+      }
     });
 
     return [
       { value: '', label: 'Select an AI model...', provider: null },
       ...availableModels
     ];
-  };
+  }, [ollamaModels, tempProviderEnabled, tempApiKeys, tempBaseUrls]);
 
   const handleTempDefaultModelChange = (model: string) => {
     setTempDefaultModel(model);
   };
 
-  const handleTempApiKeyChange = (provider: 'anthropic' | 'openai', apiKey: string) => {
+  const handleTempApiKeyChange = (provider: 'anthropic' | 'openai' | 'ollama', apiKey: string) => {
     const previousApiKey = tempApiKeys[provider];
     const hadNoPreviousKey = !previousApiKey || previousApiKey.trim() === '';
     const hasNewKey = apiKey && apiKey.trim() !== '';
     
     setTempApiKeys(prev => ({ ...prev, [provider]: apiKey }));
     
-    // Auto-enable if there was no API key before and now there is one
-    if (hadNoPreviousKey && hasNewKey) {
+    // Auto-enable if there was no API key before and now there is one (but not for ollama)
+    if (provider !== 'ollama' && hadNoPreviousKey && hasNewKey) {
       setTempProviderEnabled(prev => ({ ...prev, [provider]: true }));
     }
   };
 
-  const handleTempProviderEnabledChange = (provider: 'anthropic' | 'openai', enabled: boolean) => {
+  const handleTempBaseUrlChange = (provider: 'anthropic' | 'openai' | 'ollama', baseUrl: string) => {
+    const previousBaseUrl = tempBaseUrls[provider];
+    const hadNoPreviousUrl = !previousBaseUrl || previousBaseUrl.trim() === '';
+    const hasNewUrl = baseUrl && baseUrl.trim() !== '';
+    
+    setTempBaseUrls(prev => ({ ...prev, [provider]: baseUrl }));
+    
+    // Auto-enable if there was no base URL before and now there is one (for ollama)
+    if (provider === 'ollama' && hadNoPreviousUrl && hasNewUrl) {
+      setTempProviderEnabled(prev => ({ ...prev, [provider]: true }));
+    }
+
+    // Fetch available models when Ollama URL changes
+    if (provider === 'ollama' && hasNewUrl) {
+      fetchOllamaModels(baseUrl);
+    }
+  };
+
+  const fetchOllamaModels = async (baseUrl: string) => {
+    setIsLoadingOllamaModels(true);
+    try {
+      const response = await fetch('/api/ollama/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ baseUrl })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setOllamaModels(data.models || []);
+      } else {
+        console.error('Failed to fetch Ollama models');
+        setOllamaModels([]);
+      }
+    } catch (error) {
+      console.error('Error fetching Ollama models:', error);
+      setOllamaModels([]);
+    } finally {
+      setIsLoadingOllamaModels(false);
+    }
+  };
+
+  const handleTempProviderEnabledChange = (provider: 'anthropic' | 'openai' | 'ollama', enabled: boolean) => {
     setTempProviderEnabled(prev => ({ ...prev, [provider]: enabled }));
   };
 
-  const saveApiKey = (provider: 'anthropic' | 'openai', apiKey: string) => {
+  const saveApiKey = (provider: 'anthropic' | 'openai' | 'ollama', apiKey: string) => {
     // Update local state
     setApiKeys(prev => ({ ...prev, [provider]: apiKey }));
     
     // Save to service - use the current enabled state, don't base it on API key presence
     const isEnabled = tempProviderEnabled[provider];
+    const existingConfig = config.providers.find(p => p.provider === provider);
     const providerConfig: AIProviderConfig = {
       provider,
-      apiKey,
-      model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini',
+      apiKey: provider === 'ollama' ? undefined : apiKey,
+      baseUrl: existingConfig?.baseUrl || tempBaseUrls[provider],
+      model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : 'qwen3:8b',
       enabled: isEnabled
     };
     
@@ -126,7 +222,35 @@ export default function AISettings({ onClose }: AISettingsProps) {
     setConfig(newConfig);
   };
 
-  const saveProviderEnabled = (provider: 'anthropic' | 'openai', enabled: boolean) => {
+  const saveBaseUrl = (provider: 'anthropic' | 'openai' | 'ollama', baseUrl: string) => {
+    // Update local state
+    setBaseUrls(prev => ({ ...prev, [provider]: baseUrl }));
+    
+    // Save to service - use the current enabled state
+    const isEnabled = tempProviderEnabled[provider];
+    const existingConfig = config.providers.find(p => p.provider === provider);
+    const providerConfig: AIProviderConfig = {
+      provider,
+      apiKey: existingConfig?.apiKey || tempApiKeys[provider],
+      baseUrl,
+      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : 'qwen3:8b'),
+      enabled: isEnabled
+    };
+    
+    aiService.updateProvider(providerConfig);
+    
+    // Update local config
+    const newConfig = { ...config };
+    const existingIndex = newConfig.providers.findIndex(p => p.provider === provider);
+    if (existingIndex >= 0) {
+      newConfig.providers[existingIndex] = providerConfig;
+    } else {
+      newConfig.providers.push(providerConfig);
+    }
+    setConfig(newConfig);
+  };
+
+  const saveProviderEnabled = (provider: 'anthropic' | 'openai' | 'ollama', enabled: boolean) => {
     // Update local state
     setProviderEnabled(prev => ({ ...prev, [provider]: enabled }));
     
@@ -134,8 +258,9 @@ export default function AISettings({ onClose }: AISettingsProps) {
     const existingConfig = config.providers.find(p => p.provider === provider);
     const providerConfig: AIProviderConfig = {
       provider,
-      apiKey: existingConfig?.apiKey || tempApiKeys[provider] || '',
-      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4.1-mini'),
+      apiKey: provider === 'ollama' ? undefined : (existingConfig?.apiKey || tempApiKeys[provider] || ''),
+      baseUrl: existingConfig?.baseUrl || tempBaseUrls[provider],
+      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : 'qwen3:8b'),
       enabled
     };
     
@@ -157,15 +282,22 @@ export default function AISettings({ onClose }: AISettingsProps) {
     
     // Save API keys
     Object.entries(tempApiKeys).forEach(([provider, apiKey]) => {
-      if (apiKeys[provider as 'anthropic' | 'openai'] !== apiKey) {
-        saveApiKey(provider as 'anthropic' | 'openai', apiKey);
+      if (apiKeys[provider as 'anthropic' | 'openai' | 'ollama'] !== apiKey) {
+        saveApiKey(provider as 'anthropic' | 'openai' | 'ollama', apiKey);
+      }
+    });
+
+    // Save base URLs
+    Object.entries(tempBaseUrls).forEach(([provider, baseUrl]) => {
+      if (baseUrls[provider as 'anthropic' | 'openai' | 'ollama'] !== baseUrl) {
+        saveBaseUrl(provider as 'anthropic' | 'openai' | 'ollama', baseUrl);
       }
     });
 
     // Save provider enabled states
     Object.entries(tempProviderEnabled).forEach(([provider, enabled]) => {
-      if (providerEnabled[provider as 'anthropic' | 'openai'] !== enabled) {
-        saveProviderEnabled(provider as 'anthropic' | 'openai', enabled);
+      if (providerEnabled[provider as 'anthropic' | 'openai' | 'ollama'] !== enabled) {
+        saveProviderEnabled(provider as 'anthropic' | 'openai' | 'ollama', enabled);
       }
     });
 
@@ -185,14 +317,21 @@ export default function AISettings({ onClose }: AISettingsProps) {
     // Get the selected model's provider
     let activeProvider: 'anthropic' | 'openai' | 'none' = 'none';
     if (model) {
-      const modelInfo = getAllModels().find(m => m.value === model);
+      const modelInfo = getAllModels.find(m => m.value === model);
       if (modelInfo && modelInfo.provider) {
         activeProvider = modelInfo.provider;
       }
     }
     
-    // Set the active provider and model - check both API key and enabled state
-    if (model && activeProvider !== 'none' && apiKeys[activeProvider]?.trim() && tempProviderEnabled[activeProvider]) {
+    // Set the active provider and model - check credentials and enabled state
+    let hasValidCredentials = false;
+    if (activeProvider === 'ollama') {
+      hasValidCredentials = tempBaseUrls[activeProvider]?.trim() !== '';
+    } else if (activeProvider === 'anthropic' || activeProvider === 'openai') {
+      hasValidCredentials = apiKeys[activeProvider]?.trim() !== '';
+    }
+    
+    if (model && activeProvider !== 'none' && hasValidCredentials && tempProviderEnabled[activeProvider]) {
       aiService.setActiveProvider(activeProvider);
       const newConfig = { ...config };
       newConfig.activeProvider = activeProvider;
@@ -210,33 +349,50 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
   const getCurrentProvider = (): 'anthropic' | 'openai' | null => {
     if (!tempDefaultModel) return null;
-    const modelInfo = getAllModels().find(m => m.value === tempDefaultModel);
+    const modelInfo = getAllModels.find(m => m.value === tempDefaultModel);
     return modelInfo?.provider || null;
   };
 
   const getCurrentApiKey = (): string => {
     const provider = getCurrentProvider();
-    return provider ? tempApiKeys[provider] : '';
+    if (!provider) return '';
+    
+    // For ollama, return baseUrl; for others, return apiKey
+    if (provider === 'ollama') {
+      return tempBaseUrls[provider] || '';
+    } else {
+      return tempApiKeys[provider] || '';
+    }
   };
 
-  const testApiKey = async (provider: 'anthropic' | 'openai') => {
+  const testApiKey = async (provider: 'anthropic' | 'openai' | 'ollama') => {
     setIsTestingConnection(provider);
     setConnectionStatus(prev => ({ ...prev, [provider]: 'idle' }));
     setTestError(prev => ({ ...prev, [provider]: null }));
 
     try {
-      const apiKey = tempApiKeys[provider];
-      if (!apiKey) {
-        setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
-        setTestError(prev => ({ ...prev, [provider]: 'API key required' }));
-        return;
+      // Check credentials based on provider type
+      if (provider === 'ollama') {
+        const baseUrl = tempBaseUrls[provider];
+        if (!baseUrl) {
+          setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+          setTestError(prev => ({ ...prev, [provider]: 'Base URL required' }));
+          return;
+        }
+      } else {
+        const apiKey = tempApiKeys[provider];
+        if (!apiKey) {
+          setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+          setTestError(prev => ({ ...prev, [provider]: 'API key required' }));
+          return;
+        }
       }
 
       if (provider === 'anthropic') {
         const response = await fetch('/api/test-claude', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ apiKey })
+          body: JSON.stringify({ apiKey: tempApiKeys[provider] })
         });
         const result = await response.json();
         
@@ -245,6 +401,34 @@ export default function AISettings({ onClose }: AISettingsProps) {
         } else {
           setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
           setTestError(prev => ({ ...prev, [provider]: JSON.stringify(result, null, 2) }));
+        }
+      } else if (provider === 'ollama') {
+        // For Ollama, we need to test with a direct API call since we might not have a model configured yet
+        const testModel = ollamaModels.length > 0 ? ollamaModels[0].name : 'qwen3:8b'; // Use first available model or fallback
+        const response = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: 'ollama',
+            baseUrl: tempBaseUrls[provider],
+            model: testModel,
+            prompt: 'Test',
+            maxTokens: 5
+          })
+        });
+        
+        if (response.ok) {
+          setConnectionStatus(prev => ({ ...prev, [provider]: 'success' }));
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          let errorMessage = 'Connection test failed';
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.details) {
+            errorMessage = errorData.details;
+          }
+          setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+          setTestError(prev => ({ ...prev, [provider]: errorMessage }));
         }
       } else {
         const result = await aiService.testConnection(provider);
@@ -456,10 +640,81 @@ export default function AISettings({ onClose }: AISettingsProps) {
               </div>
             )}
           </div>
+
+          {/* Ollama Configuration */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Ollama (Local AI)
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={tempProviderEnabled.ollama}
+                  onChange={(e) => handleTempProviderEnabledChange('ollama', e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span>Enabled</span>
+              </label>
+            </div>
+            <div>
+              <input
+                type="text"
+                value={tempBaseUrls.ollama}
+                onChange={(e) => handleTempBaseUrlChange('ollama', e.target.value)}
+                placeholder="http://localhost:11434"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex flex-col">
+                <p className="text-xs text-gray-400">
+                  Enter the base URL where Ollama is running (default: http://localhost:11434)
+                </p>
+                {isLoadingOllamaModels && (
+                  <p className="text-xs text-blue-400 mt-1">
+                    Loading available models...
+                  </p>
+                )}
+                {ollamaModels.length > 0 && !isLoadingOllamaModels && (
+                  <p className="text-xs text-green-400 mt-1">
+                    Found {ollamaModels.length} model{ollamaModels.length === 1 ? '' : 's'}: {ollamaModels.map(m => m.name).join(', ')}
+                  </p>
+                )}
+              </div>
+              {tempBaseUrls.ollama && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => fetchOllamaModels(tempBaseUrls.ollama)}
+                    disabled={isLoadingOllamaModels}
+                    className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-500 disabled:bg-blue-700 disabled:text-gray-500 text-gray-100 rounded-md transition-colors"
+                  >
+                    {isLoadingOllamaModels ? 'Loading...' : 'Refresh Models'}
+                  </button>
+                  <button
+                    onClick={() => testApiKey('ollama')}
+                    disabled={isTestingConnection === 'ollama'}
+                    className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:text-gray-500 text-gray-100 rounded-md transition-colors"
+                  >
+                    {isTestingConnection === 'ollama' ? 'Testing...' : 'Test'}
+                  </button>
+                  {connectionStatus['ollama'] === 'success' && (
+                    <span className="text-green-400 text-sm">✓ Connected</span>
+                  )}
+                </div>
+              )}
+            </div>
+            {connectionStatus['ollama'] === 'error' && testError['ollama'] && (
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
+                <p className="font-semibold mb-1">Connection Failed:</p>
+                <pre className="whitespace-pre-wrap">{testError['ollama']}</pre>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Default Model Selection - After API Keys */}
-        {(tempApiKeys.anthropic.trim() !== '' || tempApiKeys.openai.trim() !== '') && (
+        {(tempApiKeys.anthropic.trim() !== '' || tempApiKeys.openai.trim() !== '' || tempBaseUrls.ollama.trim() !== '') && (
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Default AI Model
@@ -469,7 +724,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
               onChange={(e) => handleTempDefaultModelChange(e.target.value)}
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {getAllModels().map(option => (
+              {getAllModels.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -485,7 +740,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
         {tempDefaultModel && currentApiKey && currentProvider && tempProviderEnabled[currentProvider] && (
           <div className="bg-green-900/20 border border-green-800 rounded-md p-4">
             <h3 className="text-sm font-medium text-green-300 mb-2">
-              AI Features Available (using {getAllModels().find(m => m.value === tempDefaultModel)?.label}):
+              AI Features Available (using {getAllModels.find(m => m.value === tempDefaultModel)?.label}):
             </h3>
             <ul className="text-sm text-green-400 space-y-1">
               <li>• Extract properties from contender descriptions and attachments</li>
