@@ -188,11 +188,51 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
   };
 
   const handleAIAnalysis = async () => {
-    // Check if AI is configured first
+    console.log('=== AI ANALYSIS STARTING ===');
+    
+    // Detailed validation and error reporting
+    const activeProvider = aiService.getActiveProvider();
+    console.log('Active AI provider:', activeProvider);
+    
     if (!aiService.isEnabled()) {
+      console.log('AI service not enabled');
+      setAnalysisError(`AI service not configured. Current provider: ${activeProvider}`);
       setShowConfigPrompt(true);
-      setAnalysisError(null);
       return;
+    }
+
+    // Get provider configuration details
+    const config = aiService.getConfig();
+    if (config) {
+      const activeProviderConfig = config.providers.find(p => p.provider === activeProvider);
+      console.log('Provider config:', {
+        provider: activeProvider,
+        enabled: activeProviderConfig?.enabled,
+        hasApiKey: !!(activeProviderConfig?.apiKey),
+        hasBaseUrl: !!(activeProviderConfig?.baseUrl),
+        model: activeProviderConfig?.model
+      });
+
+      // Validate specific requirements per provider
+      if (activeProvider === 'ollama') {
+        if (!activeProviderConfig?.baseUrl) {
+          setAnalysisError('Ollama requires a base URL (e.g., http://localhost:11434)');
+          return;
+        }
+        if (!activeProviderConfig?.model) {
+          setAnalysisError('Ollama requires a model to be selected');
+          return;
+        }
+      } else if (activeProvider === 'anthropic' || activeProvider === 'openai') {
+        if (!activeProviderConfig?.apiKey) {
+          setAnalysisError(`${activeProvider} requires an API key`);
+          return;
+        }
+        if (!activeProviderConfig?.model) {
+          setAnalysisError(`${activeProvider} requires a model to be selected`);
+          return;
+        }
+      }
     }
 
     if (comparison.properties.length === 0) {
@@ -208,6 +248,27 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
     
     if (!hasData) {
       setAnalysisError('Please add some content (name, description, files, or links) before analysis.');
+      return;
+    }
+
+    // Test connectivity before starting analysis
+    console.log('Testing AI service connectivity...');
+    try {
+      const isConnected = await aiService.testConnection();
+      if (!isConnected) {
+        let errorMsg = `Failed to connect to ${activeProvider}`;
+        if (activeProvider === 'ollama') {
+          errorMsg += '. Make sure Ollama is running and accessible at the configured URL.';
+        } else {
+          errorMsg += '. Check your API key and internet connection.';
+        }
+        setAnalysisError(errorMsg);
+        return;
+      }
+      console.log('AI service connectivity test passed');
+    } catch (error) {
+      console.error('Connectivity test failed:', error);
+      setAnalysisError(`Connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return;
     }
 
@@ -245,6 +306,8 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
     setPreviousProperties({ ...formData.properties });
 
     try {
+      console.log('Building analysis content...');
+      
       // Build analysis content from description only
       let content = '';
       
@@ -254,9 +317,24 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
       let analysisContent = content;
       if (formData.attachments.length > 0) {
         const primaryFile = formData.attachments[0];
+        console.log('Using attachment for analysis:', {
+          name: primaryFile.name,
+          type: primaryFile.type,
+          size: primaryFile.size
+        });
+        
+        // Check if provider supports file analysis
+        if (activeProvider === 'ollama' && primaryFile.type === 'application/pdf') {
+          setAnalysisError('Ollama does not support PDF file analysis. Please use text content or switch to Claude/OpenAI for PDF support.');
+          setIsAnalyzing(false);
+          return;
+        }
+        
         // Pass the file data directly as content for PDF processing
         analysisContent = primaryFile.data;
       }
+
+      console.log('Analysis content prepared, length:', analysisContent.length);
 
       // Build prompt for property extraction
       const propertyList = comparison.properties.map(p => {
@@ -268,6 +346,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
         return desc;
       }).join('\n');
 
+      console.log('Sending analysis request to AI service...');
       const result = await aiService.analyze({
         type: 'suggest_values',
         content: analysisContent,
@@ -277,6 +356,8 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
           contenderName: formData.name
         }
       });
+      
+      console.log('AI analysis completed. Success:', result.success);
 
       if (result.success && result.data) {
         // Parse the response and extract property values
