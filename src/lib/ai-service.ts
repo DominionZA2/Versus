@@ -168,17 +168,19 @@ ${JSON.stringify(context?.existingProperties?.map(p => ({
   confidence: 0
 })), null, 2)}
 
-Rules:
-- You MUST extract text content from any PDF or document format provided
-- Do NOT claim documents are encrypted, unreadable, or corrupted - extract what you can see
-- Fill "value" with extracted data or leave as null only if truly no related information exists
-- Look for data in tables, lists, invoices, quotes, product specifications, and any structured content
-- Parse tabular data including item codes, descriptions, quantities, and prices
-- Match property names to similar terms and synonyms in the content
-- For numeric types: use numbers only (e.g., 6 not "6kW") - extract numbers from text containing units
-- For text types: use descriptive text including model names, codes, and specifications
-- Set confidence 0.1-1.0 based on certainty
-- Return ALL properties, even if value is null
+EXTRACTION RULES:
+- PRIORITIZE TABULAR DATA: Tables, line items, and structured data are the most important source
+- Extract values by finding ANY related information for each property name
+- For invoice/quote documents: scan ALL line items for relevant products
+- Property matching: "Inverter" matches any inverter/hybrid inverter products; "Battery" matches any battery products; "Solar panel" matches panel/PV products; "Price" matches unit prices or totals
+- For Code & Description properties: combine product code + description (e.g. "DEYE6KWH - Deye 6KW Hybrid Inverter")
+- For KW/power properties: extract power numbers from product descriptions ("6KW" → 6)
+- For quantity properties: extract quantity values from Qty columns
+- For price properties: extract unit prices or totals from Price columns
+- For text properties: extract meaningful product names, models, specifications
+- Always extract numbers without units for numeric fields
+- Set high confidence (0.8-0.9) for clear tabular data
+- Only return null if absolutely NO related product exists in the content
 
 Content:
 ${content}`;
