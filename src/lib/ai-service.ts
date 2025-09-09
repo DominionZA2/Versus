@@ -169,16 +169,15 @@ ${JSON.stringify(context?.existingProperties?.map(p => ({
 })), null, 2)}
 
 Rules:
-- Fill "value" with extracted data or leave as null if not found
-- Look for data in JSON-LD schema, structured data, product specifications, technical details, product descriptions, tables, lists, invoices, quotes, and embedded metadata
-- Parse tabular data including item codes, descriptions, quantities, and prices from invoices or quotes
-- Match property names to similar terms and synonyms in the content (e.g., "total kwh" might appear as "energy capacity", "battery energy", "kWh", "nominal energy", or in product descriptions like "5kwh Battery")
-- For numeric types: use numbers only (e.g., 6 not "6kW") - extract numbers from text containing units (e.g., from "5.12kWh" extract 5.12, from "6000W" extract 6000, from "565w" extract 565)
-- For text types: use descriptive text including model names, codes, and specifications (e.g., "Deye 6KW Hybrid Inverter")
-- When analyzing invoices/quotes, look for relevant items in the product list and extract specifications from item descriptions
-- Match quantities from tabular data when looking for component counts (solar panels, batteries, etc.)
-- Extract pricing information from unit prices or line totals in tabular formats
-- Set confidence 0.1-1.0 based on certainty - use 0.9-1.0 for structured data, 0.7-0.8 for product descriptions, 0.3-0.6 for inferred data
+- You MUST extract text content from any PDF or document format provided
+- Do NOT claim documents are encrypted, unreadable, or corrupted - extract what you can see
+- Fill "value" with extracted data or leave as null only if truly no related information exists
+- Look for data in tables, lists, invoices, quotes, product specifications, and any structured content
+- Parse tabular data including item codes, descriptions, quantities, and prices
+- Match property names to similar terms and synonyms in the content
+- For numeric types: use numbers only (e.g., 6 not "6kW") - extract numbers from text containing units
+- For text types: use descriptive text including model names, codes, and specifications
+- Set confidence 0.1-1.0 based on certainty
 - Return ALL properties, even if value is null
 
 Content:
@@ -240,12 +239,20 @@ Provide a structured analysis with key points that could be used as comparison p
           }
           
           if (parsed) {
-            return {
-              success: true,
-              data: (type === 'extract_properties' || type === 'extract_properties_batch')
-                ? { properties: parsed }
-                : { suggestions: parsed }
-            };
+            // Handle different response formats
+            if (type === 'suggest_values') {
+              // For suggest_values, wrap array in suggestions object
+              return {
+                success: true,
+                data: { suggestions: Array.isArray(parsed) ? parsed : parsed.suggestions || [] }
+              };
+            } else {
+              // For extract_properties, wrap in properties object
+              return {
+                success: true,
+                data: { properties: Array.isArray(parsed) ? parsed : parsed.properties || [] }
+              };
+            }
           }
           break;
         

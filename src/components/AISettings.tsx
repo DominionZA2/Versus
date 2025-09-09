@@ -315,7 +315,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
   const saveModelAndProvider = (model: string) => {
     // Get the selected model's provider
-    let activeProvider: 'anthropic' | 'openai' | 'none' = 'none';
+    let activeProvider: 'anthropic' | 'openai' | 'ollama' | 'none' = 'none';
     if (model) {
       const modelInfo = getAllModels.find(m => m.value === model);
       if (modelInfo && modelInfo.provider) {
@@ -347,7 +347,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     }
   };
 
-  const getCurrentProvider = (): 'anthropic' | 'openai' | null => {
+  const getCurrentProvider = (): 'anthropic' | 'openai' | 'ollama' | null => {
     if (!tempDefaultModel) return null;
     const modelInfo = getAllModels.find(m => m.value === tempDefaultModel);
     return modelInfo?.provider || null;

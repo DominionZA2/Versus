@@ -239,24 +239,17 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
     setPreviousProperties({ ...formData.properties });
 
     try {
-      // Build unified analysis content including both attachments and hyperlinks
+      // Build analysis content from description only
       let content = '';
       
       if (formData.description.trim()) content += `Description: ${formData.description.trim()}\n`;
-      
-      // Include hyperlinks as URLs for the AI to analyze
-      const validLinks = formData.hyperlinks.filter(link => link.trim());
-      if (validLinks.length > 0) {
-        content += `Links to analyze: ${validLinks.join(', ')}\n`;
-      }
 
-      // Combine all attachments and context information for analysis
+      // If we have attachments, use the first one as the primary content for AI analysis
       let analysisContent = content;
-      
-      // If we have attachments, use the first one as primary content but include context
       if (formData.attachments.length > 0) {
         const primaryFile = formData.attachments[0];
-        analysisContent = `${content}\n\n=== ATTACHED DOCUMENT ===\n${primaryFile.data}`;
+        // Pass the file data directly as content for PDF processing
+        analysisContent = primaryFile.data;
       }
 
       // Build prompt for property extraction
@@ -285,13 +278,21 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
         
         // Try to parse JSON response
         try {
+          console.log('=== PARSING AI RESULT ===');
+          console.log('result.data:', result.data);
+          console.log('comparison.properties:', comparison.properties);
+          
           if (typeof result.data === 'string') {
             propertyValues = JSON.parse(result.data);
           } else if (result.data.suggestions) {
             // Handle suggestions format
+            console.log('Processing suggestions:', result.data.suggestions);
             result.data.suggestions.forEach((suggestion: any) => {
+              console.log('Processing suggestion:', suggestion);
               const prop = comparison.properties.find(p => p.name === suggestion.property);
+              console.log('Found matching property:', prop);
               if (prop && suggestion.value !== undefined && suggestion.value !== null) {
+                console.log(`Setting ${prop.key} = ${suggestion.value}`);
                 propertyValues[prop.key] = suggestion.value;
               }
             });
@@ -304,6 +305,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
               }
             });
           }
+          console.log('Final propertyValues:', propertyValues);
         } catch (e) {
           console.warn('Failed to parse AI response:', e);
         }

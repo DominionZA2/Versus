@@ -39,6 +39,13 @@ export async function POST(request: NextRequest) {
         const [mediaInfo, base64Data] = file.split(',');
         const mediaType = mediaInfo.match(/data:([^;]+)/)?.[1] || 'application/octet-stream';
         
+        console.log('PDF Processing:', {
+          mediaType,
+          base64Length: base64Data?.length,
+          base64Start: base64Data?.substring(0, 50),
+          model
+        });
+        
         // Check if the selected model supports PDFs for PDF files
         const isPDF = mediaType === 'application/pdf';
         const pdfCapableModels = ['claude-3-5-sonnet-20241022', 'claude-3-5-sonnet-20240620', 'claude-sonnet-4-20250514'];
