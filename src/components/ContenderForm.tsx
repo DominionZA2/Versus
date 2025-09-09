@@ -323,12 +323,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
           size: primaryFile.size
         });
         
-        // Check if provider supports file analysis
-        if (activeProvider === 'ollama' && primaryFile.type === 'application/pdf') {
-          setAnalysisError('Ollama does not support PDF file analysis. Please use text content or switch to Claude/OpenAI for PDF support.');
-          setIsAnalyzing(false);
-          return;
-        }
+        // All providers should be able to handle the content we send them
         
         // Pass the file data directly as content for PDF processing
         analysisContent = primaryFile.data;
