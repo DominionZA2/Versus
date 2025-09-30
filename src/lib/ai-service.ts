@@ -17,6 +17,10 @@ class AnthropicService implements AIService {
         window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'building', provider: 'Anthropic', message: 'Building prompt' } }));
       }
       const prompt = this.buildPrompt(request);
+      console.log('=== ANTHROPIC PROMPT ===');
+      console.log('Request type:', request.type);
+      console.log('Prompt length:', prompt.length);
+      console.log('Prompt preview:', prompt.substring(0, 500) + '...');
       
       // Check if the content is a file (data URL)
       const isFile = request.content.startsWith('data:');
@@ -165,40 +169,20 @@ ${content}
 Return only the summary text, maximum 2-3 sentences.`;
 
       case 'suggest_values':
-        return `You are an expert at extracting product specifications from documents and mapping them to comparison properties.
+        return `TASK: Fill in the "value" field for each property below. Do NOT change anything else.
 
-TASK: Fill in the "value" field for each property by finding matching information in the content. Use intelligent fuzzy matching to map similar property names.
-
-PROPERTIES TO FILL:
+EXACT FORMAT TO RETURN:
 ${JSON.stringify(context?.existingProperties?.map(p => ({
   property: p.name,
-  type: p.type,
   value: null,
   confidence: 0
 })), null, 2)}
 
-INTELLIGENT MATCHING RULES:
-- Use semantic similarity: "Battery capacity" ≈ "Battery Size" ≈ "Battery Storage"
-- Use synonyms: "Price" ≈ "Cost" ≈ "Amount" ≈ "Total"
-- Use abbreviations: "kW" ≈ "KW" ≈ "kilowatt" ≈ "power"
-- Use related terms: "Inverter" ≈ "Hybrid Inverter" ≈ "Solar Inverter"
-- Use context clues: "Installation" ≈ "Setup" ≈ "Labor" ≈ "Service"
-
-EXTRACTION RULES:
-- PRIORITIZE TABULAR DATA: Tables, line items, and structured data are the most important source
-- For numeric properties: Extract ONLY the number, remove units (e.g., "10kWh" → 10, "$1,500" → 1500)
-- For text properties: Extract meaningful descriptions, codes, or names
-- For prices: Extract unit prices or totals, convert to numbers
-- For quantities: Extract count values
-- For ratings: Convert qualitative terms to 1-5 scale (excellent=5, good=4, fair=3, poor=2, bad=1)
-
-CONFIDENCE SCORING:
-- 0.9-1.0: Exact match in tabular data
-- 0.7-0.8: Clear semantic match in text
-- 0.5-0.6: Partial match or inferred value
-- 0.0: No match found
-
-CRITICAL: Return ONLY the JSON array above with filled values. Do not add explanations, comments, or new properties.
+RULES:
+- Fill ONLY the "value" field
+- Keep "property" names EXACTLY as shown
+- Keep "confidence" as 0.9 for filled values
+- Return ONLY this JSON array, no markdown, no wrapper
 
 Content:
 ${content}`;
@@ -234,6 +218,18 @@ Provide a structured analysis with key points that could be used as comparison p
             }
           }
           
+          // Strategy 1.5: JSON in code fences without json marker
+          if (!parsed) {
+            jsonMatch = responseText.match(/```\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+              try {
+                parsed = JSON.parse(jsonMatch[1].trim());
+              } catch (e) {
+                console.warn('Failed to parse JSON from code fences (no json marker):', e);
+              }
+            }
+          }
+          
           // Strategy 2: Plain JSON array anywhere in text
           if (!parsed) {
             jsonMatch = responseText.match(/\[[\s\S]*\]/);
@@ -246,7 +242,22 @@ Provide a structured analysis with key points that could be used as comparison p
             }
           }
           
-          // Strategy 3: Extract JSON between any brackets, ignoring surrounding text
+          // Strategy 3: Handle object with properties array
+          if (!parsed) {
+            try {
+              const objMatch = responseText.match(/\{[\s\S]*\}/);
+              if (objMatch) {
+                const obj = JSON.parse(objMatch[0]);
+                if (obj.properties && Array.isArray(obj.properties)) {
+                  parsed = obj.properties;
+                }
+              }
+            } catch (e) {
+              console.warn('Failed to parse object with properties:', e);
+            }
+          }
+          
+          // Strategy 4: Extract JSON between any brackets, ignoring surrounding text
           if (!parsed) {
             const bracketMatch = responseText.match(/\[([\s\S]*?)\]/); 
             if (bracketMatch) {

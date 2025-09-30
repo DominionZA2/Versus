@@ -188,6 +188,11 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
   };
 
   const handleAIAnalysis = async () => {
+    if (isAnalyzing) {
+      console.log('Analysis already in progress, ignoring duplicate call');
+      return;
+    }
+    
     console.log('=== AI ANALYSIS STARTING ===');
     
     // Clear previous highlights and store snapshot for undo
@@ -347,11 +352,14 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
       }).join('\n');
 
       console.log('Sending analysis request to AI service...');
+      console.log('Request type:', 'suggest_values');
+      console.log('Configured properties:', comparison.properties.map(p => ({ name: p.name, type: p.type })));
+      
       const result = await aiService.analyze({
         type: 'suggest_values',
         content: analysisContent,
         context: {
-          existingProperties: comparison.properties,
+          existingProperties: comparison.properties.map(p => ({ name: p.name, type: p.type })),
           comparisonName: comparison.name,
           contenderName: formData.name
         }
