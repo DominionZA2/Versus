@@ -358,6 +358,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
       });
       
       console.log('AI analysis completed. Success:', result.success);
+      console.log('Full result object:', JSON.stringify(result, null, 2));
 
       if (result.success && result.data) {
         // Parse the response and extract property values
@@ -367,6 +368,9 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
         try {
           console.log('=== PARSING AI RESULT ===');
           console.log('result.data:', result.data);
+          console.log('result.data type:', typeof result.data);
+          console.log('result.data.suggestions:', result.data.suggestions);
+          console.log('result.data.properties:', result.data.properties);
           console.log('comparison.properties:', comparison.properties);
           
           if (typeof result.data === 'string') {

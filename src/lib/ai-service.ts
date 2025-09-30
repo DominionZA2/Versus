@@ -165,8 +165,11 @@ ${content}
 Return only the summary text, maximum 2-3 sentences.`;
 
       case 'suggest_values':
-        return `Fill in the "value" field for each property based on the content. Return the complete JSON array with all properties:
+        return `You are an expert at extracting product specifications from documents and mapping them to comparison properties.
 
+TASK: Fill in the "value" field for each property by finding matching information in the content. Use intelligent fuzzy matching to map similar property names.
+
+PROPERTIES TO FILL:
 ${JSON.stringify(context?.existingProperties?.map(p => ({
   property: p.name,
   type: p.type,
@@ -174,21 +177,28 @@ ${JSON.stringify(context?.existingProperties?.map(p => ({
   confidence: 0
 })), null, 2)}
 
+INTELLIGENT MATCHING RULES:
+- Use semantic similarity: "Battery capacity" ≈ "Battery Size" ≈ "Battery Storage"
+- Use synonyms: "Price" ≈ "Cost" ≈ "Amount" ≈ "Total"
+- Use abbreviations: "kW" ≈ "KW" ≈ "kilowatt" ≈ "power"
+- Use related terms: "Inverter" ≈ "Hybrid Inverter" ≈ "Solar Inverter"
+- Use context clues: "Installation" ≈ "Setup" ≈ "Labor" ≈ "Service"
+
 EXTRACTION RULES:
 - PRIORITIZE TABULAR DATA: Tables, line items, and structured data are the most important source
-- Extract values by finding ANY related information for each property name
-- For invoice/quote documents: scan ALL line items for relevant products
-- Property matching: "Inverter" matches any inverter/hybrid inverter products; "Battery" matches any battery products; "Solar panel" matches panel/PV products; "Price" matches unit prices or totals
-- For Code & Description properties: combine product code + description (e.g. "DEYE6KWH - Deye 6KW Hybrid Inverter")
-- For KW/power properties: extract power numbers from product descriptions ("6KW" → 6)
-- For quantity properties: extract quantity values from Qty columns
-- For price properties: extract unit prices or totals from Price columns
-- For text properties: extract meaningful product names, models, specifications
-- Always extract numbers without units for numeric fields
-- Set high confidence (0.8-0.9) for clear tabular data
-- Only return null if absolutely NO related product exists in the content
+- For numeric properties: Extract ONLY the number, remove units (e.g., "10kWh" → 10, "$1,500" → 1500)
+- For text properties: Extract meaningful descriptions, codes, or names
+- For prices: Extract unit prices or totals, convert to numbers
+- For quantities: Extract count values
+- For ratings: Convert qualitative terms to 1-5 scale (excellent=5, good=4, fair=3, poor=2, bad=1)
 
-IMPORTANT: You must return ALL properties in the JSON array above, even if some have null values. Do not add new properties or change property names.
+CONFIDENCE SCORING:
+- 0.9-1.0: Exact match in tabular data
+- 0.7-0.8: Clear semantic match in text
+- 0.5-0.6: Partial match or inferred value
+- 0.0: No match found
+
+CRITICAL: Return ONLY the JSON array above with filled values. Do not add explanations, comments, or new properties.
 
 Content:
 ${content}`;
