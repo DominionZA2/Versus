@@ -13,6 +13,9 @@ class AnthropicService implements AIService {
     }
 
     try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'building', provider: 'Anthropic', message: 'Building prompt' } }));
+      }
       const prompt = this.buildPrompt(request);
       
       // Check if the content is a file (data URL)
@@ -35,6 +38,9 @@ class AnthropicService implements AIService {
         maxTokens: 1000
       };
 
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'request', provider: 'Anthropic', message: 'Sending request' } }));
+      }
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
@@ -69,8 +75,18 @@ class AnthropicService implements AIService {
       }
 
       const data = await response.json();
-      return this.parseResponse(data.content[0].text, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'parsing', provider: 'Anthropic', message: 'Parsing response' } }));
+      }
+      const result = this.parseResponse(data.content[0].text, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'done', provider: 'Anthropic', message: 'Analysis complete' } }));
+      }
+      return result;
     } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'error', provider: 'Anthropic', message: error instanceof Error ? error.message : 'Unknown error' } }));
+      }
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -276,8 +292,14 @@ class OpenAIService implements AIService {
     }
 
     try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'building', provider: 'OpenAI', message: 'Building prompt' } }));
+      }
       const prompt = this.buildPrompt(request);
       
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'request', provider: 'OpenAI', message: 'Sending request' } }));
+      }
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
@@ -306,8 +328,18 @@ class OpenAIService implements AIService {
       }
 
       const data = await response.json();
-      return this.parseResponse(data.choices[0].message.content, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'parsing', provider: 'OpenAI', message: 'Parsing response' } }));
+      }
+      const result = this.parseResponse(data.choices[0].message.content, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'done', provider: 'OpenAI', message: 'Analysis complete' } }));
+      }
+      return result;
     } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'error', provider: 'OpenAI', message: error instanceof Error ? error.message : 'Unknown error' } }));
+      }
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -361,8 +393,14 @@ class GeminiService implements AIService {
     }
 
     try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'building', provider: 'Gemini', message: 'Building prompt' } }));
+      }
       const prompt = this.buildPrompt(request);
       
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'request', provider: 'Gemini', message: 'Sending request' } }));
+      }
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
@@ -393,8 +431,18 @@ class GeminiService implements AIService {
       }
 
       const data = await response.json();
-      return this.parseResponse(data.candidates[0].content.parts[0].text, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'parsing', provider: 'Gemini', message: 'Parsing response' } }));
+      }
+      const result = this.parseResponse(data.candidates[0].content.parts[0].text, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'done', provider: 'Gemini', message: 'Analysis complete' } }));
+      }
+      return result;
     } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'error', provider: 'Gemini', message: error instanceof Error ? error.message : 'Unknown error' } }));
+      }
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
@@ -448,8 +496,14 @@ class OllamaService implements AIService {
     }
 
     try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'building', provider: 'Ollama', message: 'Building prompt' } }));
+      }
       const prompt = this.buildPrompt(request);
       
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'request', provider: 'Ollama', message: 'Sending request' } }));
+      }
       const response = await fetch('/api/ai', {
         method: 'POST',
         headers: {
@@ -479,8 +533,18 @@ class OllamaService implements AIService {
       }
 
       const data = await response.json();
-      return this.parseResponse(data.choices[0].message.content, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'parsing', provider: 'Ollama', message: 'Parsing response' } }));
+      }
+      const result = this.parseResponse(data.choices[0].message.content, request.type);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'done', provider: 'Ollama', message: 'Analysis complete' } }));
+      }
+      return result;
     } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ai:status', { detail: { phase: 'error', provider: 'Ollama', message: error instanceof Error ? error.message : 'Unknown error' } }));
+      }
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

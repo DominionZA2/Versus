@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import dynamic from 'next/dynamic';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,6 +15,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const AIStatusOverlay = dynamic(() => import('@/components/AIStatusOverlay'), { ssr: false });
   return (
     <html lang="en">
       <body className={`${inter.className} bg-gray-900 text-gray-100`}>
@@ -31,6 +33,7 @@ export default function RootLayout({
         <div className="min-h-screen bg-gray-900">
           {children}
         </div>
+        <AIStatusOverlay />
       </body>
     </html>
   );
