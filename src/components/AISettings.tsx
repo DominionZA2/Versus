@@ -101,11 +101,9 @@ export default function AISettings({ onClose }: AISettingsProps) {
       { value: 'o4-mini', label: 'O4 Mini (Math/Coding Specialist)', provider: 'openai' as const },
       { value: 'gpt-4o', label: 'GPT-4o (Multimodal)', provider: 'openai' as const },
       { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Powerful)', provider: 'openai' as const },
-      { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental, Fast)', provider: 'gemini' as const },
-      { value: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking (Reasoning)', provider: 'gemini' as const },
-      { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Balanced, Powerful)', provider: 'gemini' as const },
-      { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Fast, Efficient)', provider: 'gemini' as const },
-      { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash-8B (Fastest, Cheapest)', provider: 'gemini' as const }
+      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Most Advanced, State-of-the-art)', provider: 'gemini' as const },
+      { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Best Price-Performance)', provider: 'gemini' as const },
+      { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (Ultra Fast, Cost-Efficient)', provider: 'gemini' as const }
     ];
 
     // Add dynamic Ollama models
@@ -210,7 +208,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       provider,
       apiKey: provider === 'ollama' ? undefined : apiKey,
       baseUrl: existingConfig?.baseUrl || tempBaseUrls[provider],
-      model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.0-flash-exp' : 'qwen3:8b',
+      model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.5-flash' : 'qwen3:8b',
       enabled: isEnabled
     };
     
@@ -238,7 +236,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       provider,
       apiKey: existingConfig?.apiKey || tempApiKeys[provider],
       baseUrl,
-      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.0-flash-exp' : 'qwen3:8b'),
+      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.5-flash' : 'qwen3:8b'),
       enabled: isEnabled
     };
     
@@ -265,7 +263,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       provider,
       apiKey: provider === 'ollama' ? undefined : (existingConfig?.apiKey || tempApiKeys[provider] || ''),
       baseUrl: existingConfig?.baseUrl || tempBaseUrls[provider],
-      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.0-flash-exp' : 'qwen3:8b'),
+      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.5-flash' : 'qwen3:8b'),
       enabled
     };
     
@@ -443,7 +441,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
           body: JSON.stringify({
             provider: 'gemini',
             apiKey: tempApiKeys.gemini,
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             prompt: 'Test',
             maxTokens: 5
           })

@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         max_tokens: maxTokens
       };
     } else if (provider === 'gemini') {
-      const modelName = model || 'gemini-2.0-flash-exp';
+      const modelName = model || 'gemini-2.5-flash';
       apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
       headers = {
         'Content-Type': 'application/json'
