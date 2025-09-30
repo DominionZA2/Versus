@@ -190,6 +190,11 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
   const handleAIAnalysis = async () => {
     console.log('=== AI ANALYSIS STARTING ===');
     
+    // Clear previous highlights and store snapshot for undo
+    setUpdatedProperties(new Set());
+    setPreviousProperties({ ...formData.properties });
+    setShowUndoOption(false);
+    
     // Detailed validation and error reporting
     const activeProvider = aiService.getActiveProvider();
     console.log('Active AI provider:', activeProvider);

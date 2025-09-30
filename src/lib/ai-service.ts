@@ -188,6 +188,8 @@ EXTRACTION RULES:
 - Set high confidence (0.8-0.9) for clear tabular data
 - Only return null if absolutely NO related product exists in the content
 
+IMPORTANT: You must return ALL properties in the JSON array above, even if some have null values. Do not add new properties or change property names.
+
 Content:
 ${content}`;
 
