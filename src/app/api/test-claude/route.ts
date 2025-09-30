@@ -8,8 +8,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API key required' }, { status: 400 });
     }
 
-    console.log('Testing Claude API with key:', apiKey.substring(0, 10) + '...');
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -24,11 +22,7 @@ export async function POST(request: NextRequest) {
       })
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
     const responseText = await response.text();
-    console.log('Response body:', responseText);
 
     if (!response.ok) {
       return NextResponse.json({

@@ -3,12 +3,25 @@ import { Comparison, Contender } from '@/types';
 const COMPARISONS_KEY = 'versus_comparisons';
 const CONTENDERS_KEY = 'versus_contenders';
 
+const parseJSON = <T>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') return fallback;
+  const raw = localStorage.getItem(key);
+  if (!raw) return fallback;
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    console.warn(`Failed to parse localStorage key "${key}"`, error);
+    localStorage.removeItem(key);
+    return fallback;
+  }
+};
+
 export const storage = {
   // Comparisons
   getComparisons(): Comparison[] {
     if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(COMPARISONS_KEY);
-    const comparisons = data ? JSON.parse(data) : [];
+    const comparisons = parseJSON<Comparison[]>(COMPARISONS_KEY, []);
     
     // Ensure backwards compatibility - add properties array if missing
     return comparisons.map((comp: any) => ({
@@ -52,8 +65,7 @@ export const storage = {
   // Contenders
   getContenders(comparisonId?: string): Contender[] {
     if (typeof window === 'undefined') return [];
-    const data = localStorage.getItem(CONTENDERS_KEY);
-    const contenders = data ? JSON.parse(data) : [];
+    const contenders = parseJSON<Contender[]>(CONTENDERS_KEY, []);
     
     // Ensure backwards compatibility - add properties, attachments, and hyperlinks if missing
     const compatibleContenders = contenders.map((contender: any) => ({
@@ -90,7 +102,7 @@ export const storage = {
 
   // Utility
   generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
   },
 
   generateSlug(name: string): string {

@@ -15,7 +15,7 @@ export default function HomePage() {
     if (existingComparisons.length === 0) {
       // No comparisons exist, go directly to create new comparison
       console.log('No comparisons found, navigating to create new');
-      router.push('/comparisons?create=true');
+      router.push('/comparisons/new');
     } else {
       // Show existing comparisons
       console.log('Existing comparisons found, navigating to list');

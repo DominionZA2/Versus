@@ -15,10 +15,6 @@ class AnthropicService implements AIService {
     try {
       const prompt = this.buildPrompt(request);
       
-      console.log('=== BUILT PROMPT ===');
-      console.log(prompt);
-      console.log('=== END PROMPT ===');
-      
       // Check if the content is a file (data URL)
       const isFile = request.content.startsWith('data:');
       
@@ -73,12 +69,6 @@ class AnthropicService implements AIService {
       }
 
       const data = await response.json();
-      console.log('=== RAW AI RESPONSE ===');
-      console.log(data);
-      console.log('=== AI MESSAGE CONTENT ===');
-      console.log(data.content[0].text);
-      console.log('=== END AI RESPONSE ===');
-      
       return this.parseResponse(data.content[0].text, request.type);
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -358,6 +348,93 @@ class OpenAIService implements AIService {
   }
 }
 
+class GeminiService implements AIService {
+  private config: AIProviderConfig;
+
+  constructor(config: AIProviderConfig) {
+    this.config = config;
+  }
+
+  async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
+    if (!this.config.enabled || !this.config.apiKey) {
+      return { success: false, error: 'Gemini service not configured' };
+    }
+
+    try {
+      const prompt = this.buildPrompt(request);
+      
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider: 'gemini',
+          apiKey: this.config.apiKey,
+          baseUrl: this.config.baseUrl,
+          model: this.config.model,
+          prompt,
+          maxTokens: 1000
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        let errorMessage = `API request failed: ${response.status} ${response.statusText}`;
+        
+        // Pass through the raw Gemini error message
+        if (errorData.error && errorData.error.message) {
+          errorMessage = errorData.error.message;
+        } else if (errorData.details) {
+          errorMessage = errorData.details;
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      return this.parseResponse(data.candidates[0].content.parts[0].text, request.type);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider: 'gemini',
+          apiKey: this.config.apiKey,
+          baseUrl: this.config.baseUrl,
+          model: this.config.model,
+          prompt: 'Test',
+          maxTokens: 5
+        })
+      });
+
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  private buildPrompt(request: AIAnalysisRequest): string {
+    // Same prompt building logic as Anthropic
+    const anthropicService = new AnthropicService(this.config);
+    return (anthropicService as any).buildPrompt(request);
+  }
+
+  private parseResponse(responseText: string, type: string): AIAnalysisResponse {
+    // Same parsing logic as Anthropic
+    const anthropicService = new AnthropicService(this.config);
+    return (anthropicService as any).parseResponse(responseText, type);
+  }
+}
+
 class OllamaService implements AIService {
   private config: AIProviderConfig;
 
@@ -494,8 +571,8 @@ export class AIServiceManager {
       return;
     }
 
-    // API key is required for anthropic and openai, but not for ollama
-    if ((activeProviderConfig.provider === 'anthropic' || activeProviderConfig.provider === 'openai') && !activeProviderConfig.apiKey) {
+    // API key is required for anthropic, openai, and gemini, but not for ollama
+    if ((activeProviderConfig.provider === 'anthropic' || activeProviderConfig.provider === 'openai' || activeProviderConfig.provider === 'gemini') && !activeProviderConfig.apiKey) {
       this.activeService = null;
       return;
     }
@@ -512,6 +589,9 @@ export class AIServiceManager {
         break;
       case 'openai':
         this.activeService = new OpenAIService(activeProviderConfig);
+        break;
+      case 'gemini':
+        this.activeService = new GeminiService(activeProviderConfig);
         break;
       case 'ollama':
         this.activeService = new OllamaService(activeProviderConfig);
@@ -545,7 +625,7 @@ export class AIServiceManager {
     this.saveConfig();
   }
 
-  public setActiveProvider(provider: 'anthropic' | 'openai' | 'ollama' | 'none'): void {
+  public setActiveProvider(provider: 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'none'): void {
     if (!this.config) return;
 
     this.config.activeProvider = provider;
@@ -554,7 +634,7 @@ export class AIServiceManager {
   }
 
 
-  public getProviderConfig(provider: 'anthropic' | 'openai' | 'ollama'): AIProviderConfig | null {
+  public getProviderConfig(provider: 'anthropic' | 'openai' | 'gemini' | 'ollama'): AIProviderConfig | null {
     if (!this.config) return null;
     return this.config.providers.find(p => p.provider === provider) || null;
   }
@@ -575,7 +655,7 @@ export class AIServiceManager {
     return this.activeService.analyze(request);
   }
 
-  public async testConnection(provider?: 'anthropic' | 'openai' | 'ollama'): Promise<boolean> {
+  public async testConnection(provider?: 'anthropic' | 'openai' | 'gemini' | 'ollama'): Promise<boolean> {
     if (provider) {
       const providerConfig = this.getProviderConfig(provider);
       if (!providerConfig) return false;
@@ -587,6 +667,9 @@ export class AIServiceManager {
           break;
         case 'openai':
           service = new OpenAIService(providerConfig);
+          break;
+        case 'gemini':
+          service = new GeminiService(providerConfig);
           break;
         case 'ollama':
           service = new OllamaService(providerConfig);

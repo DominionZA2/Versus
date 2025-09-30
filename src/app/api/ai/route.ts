@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Provider required' }, { status: 400 });
     }
 
-    // API key is required for anthropic and openai, but not for ollama
-    if ((provider === 'anthropic' || provider === 'openai') && !apiKey) {
+    // API key is required for anthropic, openai, and gemini, but not for ollama
+    if ((provider === 'anthropic' || provider === 'openai' || provider === 'gemini') && !apiKey) {
       return NextResponse.json({ error: 'API key required for this provider' }, { status: 400 });
     }
 
@@ -96,6 +96,22 @@ export async function POST(request: NextRequest) {
         model: model || 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: maxTokens
+      };
+    } else if (provider === 'gemini') {
+      const modelName = model || 'gemini-2.0-flash-exp';
+      apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      headers = {
+        'Content-Type': 'application/json'
+      };
+      requestBody = {
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          maxOutputTokens: maxTokens
+        }
       };
     } else if (provider === 'ollama') {
       apiUrl = `${baseUrl}/v1/chat/completions`;

@@ -1,5 +1,5 @@
 export interface AIProviderConfig {
-  provider: 'anthropic' | 'openai' | 'ollama';
+  provider: 'anthropic' | 'openai' | 'ollama' | 'gemini';
   apiKey?: string; // Optional for ollama
   baseUrl?: string; // For ollama and custom endpoints
   model: string;
@@ -8,7 +8,7 @@ export interface AIProviderConfig {
 
 export interface AIConfig {
   providers: AIProviderConfig[];
-  activeProvider: 'anthropic' | 'openai' | 'ollama' | 'none';
+  activeProvider: 'anthropic' | 'openai' | 'ollama' | 'gemini' | 'none';
 }
 
 export interface AIAnalysisRequest {

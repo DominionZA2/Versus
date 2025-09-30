@@ -14,13 +14,13 @@ export default function AISettings({ onClose }: AISettingsProps) {
     activeProvider: 'none'
   });
   const [defaultModel, setDefaultModel] = useState<string>('');
-  const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: '' });
-  const [tempApiKeys, setTempApiKeys] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: '' });
-  const [baseUrls, setBaseUrls] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: 'http://localhost:11434' });
-  const [tempBaseUrls, setTempBaseUrls] = useState<Record<'anthropic' | 'openai' | 'ollama', string>>({ anthropic: '', openai: '', ollama: 'http://localhost:11434' });
+  const [apiKeys, setApiKeys] = useState<Record<'anthropic' | 'openai' | 'gemini' | 'ollama', string>>({ anthropic: '', openai: '', gemini: '', ollama: '' });
+  const [tempApiKeys, setTempApiKeys] = useState<Record<'anthropic' | 'openai' | 'gemini' | 'ollama', string>>({ anthropic: '', openai: '', gemini: '', ollama: '' });
+  const [baseUrls, setBaseUrls] = useState<Record<'anthropic' | 'openai' | 'gemini' | 'ollama', string>>({ anthropic: '', openai: '', gemini: '', ollama: 'http://localhost:11434' });
+  const [tempBaseUrls, setTempBaseUrls] = useState<Record<'anthropic' | 'openai' | 'gemini' | 'ollama', string>>({ anthropic: '', openai: '', gemini: '', ollama: 'http://localhost:11434' });
   const [tempDefaultModel, setTempDefaultModel] = useState<string>('');
-  const [providerEnabled, setProviderEnabled] = useState<Record<'anthropic' | 'openai' | 'ollama', boolean>>({ anthropic: false, openai: false, ollama: false });
-  const [tempProviderEnabled, setTempProviderEnabled] = useState<Record<'anthropic' | 'openai' | 'ollama', boolean>>({ anthropic: false, openai: false, ollama: false });
+  const [providerEnabled, setProviderEnabled] = useState<Record<'anthropic' | 'openai' | 'gemini' | 'ollama', boolean>>({ anthropic: false, openai: false, gemini: false, ollama: false });
+  const [tempProviderEnabled, setTempProviderEnabled] = useState<Record<'anthropic' | 'openai' | 'gemini' | 'ollama', boolean>>({ anthropic: false, openai: false, gemini: false, ollama: false });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -100,7 +100,12 @@ export default function AISettings({ onClose }: AISettingsProps) {
       { value: 'o3-mini', label: 'O3 Mini (Fast Reasoning)', provider: 'openai' as const },
       { value: 'o4-mini', label: 'O4 Mini (Math/Coding Specialist)', provider: 'openai' as const },
       { value: 'gpt-4o', label: 'GPT-4o (Multimodal)', provider: 'openai' as const },
-      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Powerful)', provider: 'openai' as const }
+      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Powerful)', provider: 'openai' as const },
+      { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Experimental, Fast)', provider: 'gemini' as const },
+      { value: 'gemini-2.0-flash-thinking-exp-01-21', label: 'Gemini 2.0 Flash Thinking (Reasoning)', provider: 'gemini' as const },
+      { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Balanced, Powerful)', provider: 'gemini' as const },
+      { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash (Fast, Efficient)', provider: 'gemini' as const },
+      { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash-8B (Fastest, Cheapest)', provider: 'gemini' as const }
     ];
 
     // Add dynamic Ollama models
@@ -135,7 +140,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     setTempDefaultModel(model);
   };
 
-  const handleTempApiKeyChange = (provider: 'anthropic' | 'openai' | 'ollama', apiKey: string) => {
+  const handleTempApiKeyChange = (provider: 'anthropic' | 'openai' | 'gemini' | 'ollama', apiKey: string) => {
     const previousApiKey = tempApiKeys[provider];
     const hadNoPreviousKey = !previousApiKey || previousApiKey.trim() === '';
     const hasNewKey = apiKey && apiKey.trim() !== '';
@@ -148,7 +153,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     }
   };
 
-  const handleTempBaseUrlChange = (provider: 'anthropic' | 'openai' | 'ollama', baseUrl: string) => {
+  const handleTempBaseUrlChange = (provider: 'anthropic' | 'openai' | 'gemini' | 'ollama', baseUrl: string) => {
     const previousBaseUrl = tempBaseUrls[provider];
     const hadNoPreviousUrl = !previousBaseUrl || previousBaseUrl.trim() === '';
     const hasNewUrl = baseUrl && baseUrl.trim() !== '';
@@ -190,11 +195,11 @@ export default function AISettings({ onClose }: AISettingsProps) {
     }
   };
 
-  const handleTempProviderEnabledChange = (provider: 'anthropic' | 'openai' | 'ollama', enabled: boolean) => {
+  const handleTempProviderEnabledChange = (provider: 'anthropic' | 'openai' | 'gemini' | 'ollama', enabled: boolean) => {
     setTempProviderEnabled(prev => ({ ...prev, [provider]: enabled }));
   };
 
-  const saveApiKey = (provider: 'anthropic' | 'openai' | 'ollama', apiKey: string) => {
+  const saveApiKey = (provider: 'anthropic' | 'openai' | 'gemini' | 'ollama', apiKey: string) => {
     // Update local state
     setApiKeys(prev => ({ ...prev, [provider]: apiKey }));
     
@@ -205,7 +210,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       provider,
       apiKey: provider === 'ollama' ? undefined : apiKey,
       baseUrl: existingConfig?.baseUrl || tempBaseUrls[provider],
-      model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : 'qwen3:8b',
+      model: provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.0-flash-exp' : 'qwen3:8b',
       enabled: isEnabled
     };
     
@@ -222,7 +227,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     setConfig(newConfig);
   };
 
-  const saveBaseUrl = (provider: 'anthropic' | 'openai' | 'ollama', baseUrl: string) => {
+  const saveBaseUrl = (provider: 'anthropic' | 'openai' | 'gemini' | 'ollama', baseUrl: string) => {
     // Update local state
     setBaseUrls(prev => ({ ...prev, [provider]: baseUrl }));
     
@@ -233,7 +238,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       provider,
       apiKey: existingConfig?.apiKey || tempApiKeys[provider],
       baseUrl,
-      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : 'qwen3:8b'),
+      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.0-flash-exp' : 'qwen3:8b'),
       enabled: isEnabled
     };
     
@@ -250,7 +255,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     setConfig(newConfig);
   };
 
-  const saveProviderEnabled = (provider: 'anthropic' | 'openai' | 'ollama', enabled: boolean) => {
+  const saveProviderEnabled = (provider: 'anthropic' | 'openai' | 'gemini' | 'ollama', enabled: boolean) => {
     // Update local state
     setProviderEnabled(prev => ({ ...prev, [provider]: enabled }));
     
@@ -260,7 +265,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
       provider,
       apiKey: provider === 'ollama' ? undefined : (existingConfig?.apiKey || tempApiKeys[provider] || ''),
       baseUrl: existingConfig?.baseUrl || tempBaseUrls[provider],
-      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : 'qwen3:8b'),
+      model: existingConfig?.model || (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : provider === 'openai' ? 'gpt-4.1-mini' : provider === 'gemini' ? 'gemini-2.0-flash-exp' : 'qwen3:8b'),
       enabled
     };
     
@@ -315,7 +320,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
 
   const saveModelAndProvider = (model: string) => {
     // Get the selected model's provider
-    let activeProvider: 'anthropic' | 'openai' | 'ollama' | 'none' = 'none';
+    let activeProvider: 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'none' = 'none';
     if (model) {
       const modelInfo = getAllModels.find(m => m.value === model);
       if (modelInfo && modelInfo.provider) {
@@ -327,7 +332,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     let hasValidCredentials = false;
     if (activeProvider === 'ollama') {
       hasValidCredentials = tempBaseUrls[activeProvider]?.trim() !== '';
-    } else if (activeProvider === 'anthropic' || activeProvider === 'openai') {
+    } else if (activeProvider === 'anthropic' || activeProvider === 'openai' || activeProvider === 'gemini') {
       hasValidCredentials = apiKeys[activeProvider]?.trim() !== '';
     }
     
@@ -347,7 +352,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     }
   };
 
-  const getCurrentProvider = (): 'anthropic' | 'openai' | 'ollama' | null => {
+  const getCurrentProvider = (): 'anthropic' | 'openai' | 'gemini' | 'ollama' | null => {
     if (!tempDefaultModel) return null;
     const modelInfo = getAllModels.find(m => m.value === tempDefaultModel);
     return modelInfo?.provider || null;
@@ -365,7 +370,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     }
   };
 
-  const testApiKey = async (provider: 'anthropic' | 'openai' | 'ollama') => {
+  const testApiKey = async (provider: 'anthropic' | 'openai' | 'gemini' | 'ollama') => {
     setIsTestingConnection(provider);
     setConnectionStatus(prev => ({ ...prev, [provider]: 'idle' }));
     setTestError(prev => ({ ...prev, [provider]: null }));
@@ -430,7 +435,35 @@ export default function AISettings({ onClose }: AISettingsProps) {
           setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
           setTestError(prev => ({ ...prev, [provider]: errorMessage }));
         }
+      } else if (provider === 'gemini') {
+        // Test Gemini directly using the provided temp key without requiring save
+        const response = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: 'gemini',
+            apiKey: tempApiKeys.gemini,
+            model: 'gemini-2.0-flash-exp',
+            prompt: 'Test',
+            maxTokens: 5
+          })
+        });
+
+        if (response.ok) {
+          setConnectionStatus(prev => ({ ...prev, [provider]: 'success' }));
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          let errorMessage = 'Connection test failed';
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.details) {
+            errorMessage = errorData.details;
+          }
+          setConnectionStatus(prev => ({ ...prev, [provider]: 'error' }));
+          setTestError(prev => ({ ...prev, [provider]: errorMessage }));
+        }
       } else {
+        // OpenAI: test via service which uses saved config
         const result = await aiService.testConnection(provider);
         setConnectionStatus(prev => ({ ...prev, [provider]: result ? 'success' : 'error' }));
         if (!result) {
@@ -445,23 +478,27 @@ export default function AISettings({ onClose }: AISettingsProps) {
     }
   };
 
-  const getApiKeyPlaceholder = (provider: 'anthropic' | 'openai') => {
+  const getApiKeyPlaceholder = (provider: 'anthropic' | 'openai' | 'gemini') => {
     switch (provider) {
       case 'anthropic':
         return 'sk-ant-api03-...';
       case 'openai':
         return 'sk-...';
+      case 'gemini':
+        return 'AIzaSy...';
       default:
         return '';
     }
   };
 
-  const getApiKeyHelpText = (provider: 'anthropic' | 'openai') => {
+  const getApiKeyHelpText = (provider: 'anthropic' | 'openai' | 'gemini') => {
     switch (provider) {
       case 'anthropic':
         return 'Get your API key from https://console.anthropic.com/';
       case 'openai':
         return 'Get your API key from https://platform.openai.com/api-keys';
+      case 'gemini':
+        return 'Get your API key from https://aistudio.google.com/app/apikey';
       default:
         return '';
     }
@@ -641,6 +678,72 @@ export default function AISettings({ onClose }: AISettingsProps) {
             )}
           </div>
 
+          {/* Gemini API Key */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Google Gemini API Key
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={tempProviderEnabled.gemini}
+                  onChange={(e) => handleTempProviderEnabledChange('gemini', e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span>Enabled</span>
+              </label>
+            </div>
+            <div className="relative">
+              <input
+                type={showApiKeys['gemini'] ? "text" : "password"}
+                value={tempApiKeys.gemini}
+                onChange={(e) => handleTempApiKeyChange('gemini', e.target.value)}
+                placeholder={getApiKeyPlaceholder('gemini')}
+                className="w-full px-3 py-2 pr-20 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => toggleShowApiKey('gemini')}
+                className="absolute inset-y-0 right-0 px-3 py-2 text-sm text-gray-400 hover:text-gray-200"
+              >
+                {showApiKeys['gemini'] ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-xs text-blue-600">
+                <a 
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  {getApiKeyHelpText('gemini')}
+                </a>
+              </p>
+              {tempApiKeys.gemini && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => testApiKey('gemini')}
+                    disabled={isTestingConnection === 'gemini'}
+                    className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:text-gray-500 text-gray-100 rounded-md transition-colors"
+                  >
+                    {isTestingConnection === 'gemini' ? 'Testing...' : 'Test'}
+                  </button>
+                  {connectionStatus['gemini'] === 'success' && (
+                    <span className="text-green-400 text-sm">✓ Connected</span>
+                  )}
+                </div>
+              )}
+            </div>
+            {connectionStatus['gemini'] === 'error' && testError['gemini'] && (
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
+                <p className="font-semibold mb-1">Connection Failed:</p>
+                <pre className="whitespace-pre-wrap">{testError['gemini']}</pre>
+              </div>
+            )}
+          </div>
+
           {/* Ollama Configuration */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -714,7 +817,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
         </div>
 
         {/* Default Model Selection - After API Keys */}
-        {(tempApiKeys.anthropic.trim() !== '' || tempApiKeys.openai.trim() !== '' || tempBaseUrls.ollama.trim() !== '') && (
+        {(tempApiKeys.anthropic.trim() !== '' || tempApiKeys.openai.trim() !== '' || tempApiKeys.gemini.trim() !== '' || tempBaseUrls.ollama.trim() !== '') && (
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Default AI Model
