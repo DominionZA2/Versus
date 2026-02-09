@@ -3,6 +3,8 @@ import { Comparison, Contender } from '@/types';
 const COMPARISONS_KEY = 'versus_comparisons';
 const CONTENDERS_KEY = 'versus_contenders';
 
+let hydrated = false;
+
 const parseJSON = <T>(key: string, fallback: T): T => {
   if (typeof window === 'undefined') return fallback;
   const raw = localStorage.getItem(key);
@@ -17,12 +19,20 @@ const parseJSON = <T>(key: string, fallback: T): T => {
   }
 };
 
+function syncToServer(key: string, data: unknown): void {
+  fetch('/api/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ [key]: data }),
+  }).catch((err) => console.warn('Failed to sync to server:', err));
+}
+
 export const storage = {
   // Comparisons
   getComparisons(): Comparison[] {
     if (typeof window === 'undefined') return [];
     const comparisons = parseJSON<Comparison[]>(COMPARISONS_KEY, []);
-    
+
     // Ensure backwards compatibility - add properties array if missing
     return comparisons.map((comp: any) => ({
       ...comp,
@@ -34,24 +44,28 @@ export const storage = {
     if (typeof window === 'undefined') return;
     const comparisons = this.getComparisons();
     const existingIndex = comparisons.findIndex(c => c.id === comparison.id);
-    
+
     if (existingIndex >= 0) {
       comparisons[existingIndex] = comparison;
     } else {
       comparisons.push(comparison);
     }
-    
+
     localStorage.setItem(COMPARISONS_KEY, JSON.stringify(comparisons));
+    syncToServer('comparisons', comparisons);
   },
 
   deleteComparison(id: string): void {
     if (typeof window === 'undefined') return;
     const comparisons = this.getComparisons().filter(c => c.id !== id);
     localStorage.setItem(COMPARISONS_KEY, JSON.stringify(comparisons));
-    
+
     // Also delete related contenders
     const contenders = this.getContenders().filter(c => c.comparisonId !== id);
     localStorage.setItem(CONTENDERS_KEY, JSON.stringify(contenders));
+
+    syncToServer('comparisons', comparisons);
+    syncToServer('contenders', contenders);
   },
 
   getComparison(id: string): Comparison | null {
@@ -66,7 +80,7 @@ export const storage = {
   getContenders(comparisonId?: string): Contender[] {
     if (typeof window === 'undefined') return [];
     const contenders = parseJSON<Contender[]>(CONTENDERS_KEY, []);
-    
+
     // Ensure backwards compatibility - add properties, attachments, and hyperlinks if missing
     const compatibleContenders = contenders.map((contender: any) => ({
       ...contender,
@@ -74,8 +88,8 @@ export const storage = {
       attachments: contender.attachments || [],
       hyperlinks: contender.hyperlinks || []
     }));
-    
-    return comparisonId 
+
+    return comparisonId
       ? compatibleContenders.filter((c: Contender) => c.comparisonId === comparisonId)
       : compatibleContenders;
   },
@@ -84,20 +98,47 @@ export const storage = {
     if (typeof window === 'undefined') return;
     const contenders = this.getContenders();
     const existingIndex = contenders.findIndex(c => c.id === contender.id);
-    
+
     if (existingIndex >= 0) {
       contenders[existingIndex] = contender;
     } else {
       contenders.push(contender);
     }
-    
+
     localStorage.setItem(CONTENDERS_KEY, JSON.stringify(contenders));
+    syncToServer('contenders', contenders);
   },
 
   deleteContender(id: string): void {
     if (typeof window === 'undefined') return;
     const contenders = this.getContenders().filter(c => c.id !== id);
     localStorage.setItem(CONTENDERS_KEY, JSON.stringify(contenders));
+    syncToServer('contenders', contenders);
+  },
+
+  // Hydration
+  async hydrate(): Promise<void> {
+    if (hydrated || typeof window === 'undefined') return;
+    hydrated = true;
+
+    try {
+      const res = await fetch('/api/data');
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      if (Array.isArray(data.comparisons) && data.comparisons.length > 0) {
+        localStorage.setItem(COMPARISONS_KEY, JSON.stringify(data.comparisons));
+      }
+      if (Array.isArray(data.contenders) && data.contenders.length > 0) {
+        localStorage.setItem(CONTENDERS_KEY, JSON.stringify(data.contenders));
+      }
+      if (data.aiConfig) {
+        localStorage.setItem('versus_ai_config', JSON.stringify(data.aiConfig));
+      }
+    } catch (err) {
+      console.warn('Failed to hydrate from server:', err);
+    }
   },
 
   // Utility

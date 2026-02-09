@@ -35,6 +35,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# user data
+/data
+
 # claude code
 .claude/settings.local.json
 /.vs

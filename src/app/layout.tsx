@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import dynamic from 'next/dynamic';
+import DataHydrator from '@/components/DataHydrator';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,6 +34,7 @@ export default function RootLayout({
         <div className="min-h-screen bg-gray-900">
           {children}
         </div>
+        <DataHydrator />
         <AIStatusOverlay />
       </body>
     </html>

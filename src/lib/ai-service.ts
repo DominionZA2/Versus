@@ -643,6 +643,11 @@ export class AIServiceManager {
   private saveConfig(): void {
     if (typeof window !== 'undefined' && this.config) {
       localStorage.setItem('versus_ai_config', JSON.stringify(this.config));
+      fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aiConfig: this.config }),
+      }).catch((err) => console.warn('Failed to sync AI config to server:', err));
     }
   }
 
