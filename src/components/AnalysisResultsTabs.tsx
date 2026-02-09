@@ -55,7 +55,7 @@ export default function AnalysisResultsTabs({ data, rawJson, sourceInfo, classNa
         
         {activeTab === 'log' && (
           <div>
-            <pre className="text-sm text-gray-300 whitespace-pre-wrap overflow-auto max-h-96 bg-gray-800 p-4 rounded border">
+            <pre className="text-sm text-gray-300 whitespace-pre-wrap overflow-auto max-h-96 bg-gray-800 p-4 rounded-sm border border-gray-600">
               {rawJson}
             </pre>
           </div>

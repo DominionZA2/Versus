@@ -32,7 +32,7 @@ export default function AIConfigPrompt({
   return (
     <div className={`bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 ${className}`}>
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 mt-0.5">
+        <div className="shrink-0 mt-0.5">
           <svg 
             className="w-5 h-5 text-yellow-500" 
             fill="currentColor" 
@@ -55,14 +55,14 @@ export default function AIConfigPrompt({
           <div className="flex gap-2">
             <button
               onClick={handleConfigureClick}
-              className="bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+              className="bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors focus:outline-hidden focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-800"
             >
               Configure AI Settings
             </button>
             {onDismiss && (
               <button
                 onClick={handleDismiss}
-                className="bg-gray-600 hover:bg-gray-500 text-gray-300 text-sm font-medium px-3 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                className="bg-gray-600 hover:bg-gray-500 text-gray-300 text-sm font-medium px-3 py-2 rounded-md transition-colors focus:outline-hidden focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
               >
                 Dismiss
               </button>

@@ -824,7 +824,7 @@ export default function ComparisonDetailPage() {
                                   setEditProperty(prev => ({ ...prev, name: e.target.value }));
                                   if (editPropertyError) setEditPropertyError(''); // Clear error when user starts typing
                                 }}
-                                className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 focus:outline-none focus:ring-2 ${
+                                className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 focus:outline-hidden focus:ring-2 ${
                                   editPropertyError 
                                     ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
                                     : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
@@ -841,7 +841,7 @@ export default function ComparisonDetailPage() {
                               <select
                                 value={editProperty.type}
                                 onChange={(e) => setEditProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
-                                className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                               >
                                 <option value="text">Text</option>
                                 <option value="number">Number</option>
@@ -940,7 +940,7 @@ export default function ComparisonDetailPage() {
                   isAddPropertiesExpanded ? 'mb-4' : 'mb-0'
                 }`}
               >
-                <span className={`transform transition-transform duration-200 ${
+                <span className={`transition-transform duration-200 ${
                   isAddPropertiesExpanded ? 'rotate-90' : ''
                 }`}>
                   ▶
@@ -977,7 +977,7 @@ export default function ComparisonDetailPage() {
                               }
                             }}
                             placeholder="e.g., Price, Quality, Ease of Use"
-                            className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 ${
+                            className={`w-full px-3 py-2 bg-gray-600 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 ${
                               newPropertyError 
                                 ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
                                 : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
@@ -994,7 +994,7 @@ export default function ComparisonDetailPage() {
                           <select
                             value={newProperty.type}
                             onChange={(e) => setNewProperty(prev => ({ ...prev, type: e.target.value as 'text' | 'number' | 'rating' | 'datetime' }))}
-                            className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="px-3 py-2 bg-gray-600 border border-gray-500 rounded-md text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="text">Text</option>
                             <option value="number">Number</option>
@@ -1065,7 +1065,7 @@ export default function ComparisonDetailPage() {
                             if (bulkPropertyError) setBulkPropertyError(''); // Clear error when user starts typing
                           }}
                           placeholder="e.g., Price, Quality, Features, Warranty, Support, Installation Time"
-                          className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${
+                          className={`w-full px-3 py-2 bg-gray-700 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 resize-none ${
                             bulkPropertyError 
                               ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
                               : 'border-gray-500 focus:ring-blue-500 focus:border-blue-500'
@@ -1085,7 +1085,7 @@ export default function ComparisonDetailPage() {
                           <select
                             value={bulkPropertyType}
                             onChange={(e) => setBulkPropertyType(e.target.value as 'text' | 'number' | 'rating' | 'datetime')}
-                            className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-500 rounded-md text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
                           >
                             <option value="text">Text</option>
                             <option value="number">Number</option>
@@ -1149,7 +1149,7 @@ export default function ComparisonDetailPage() {
                 {!isAiAvailable && (
                   <div className="bg-amber-900/20 border border-amber-800 rounded-md p-4 mb-4">
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <span className="text-amber-400 text-lg">⚠️</span>
                       </div>
                       <div>
@@ -1182,7 +1182,7 @@ export default function ComparisonDetailPage() {
                     placeholder="Add specific instructions for your file type or domain (e.g., 'Focus on pricing tables', 'Extract server configuration settings', etc.)"
                     className={`w-full px-3 py-2 border rounded-md text-sm ${
                       isAiAvailable 
-                        ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        ? 'bg-gray-600 border-gray-500 text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500'
                         : 'bg-gray-700 border-gray-600 text-gray-400 placeholder-gray-500 cursor-not-allowed'
                     }`}
                     rows={6}
@@ -1195,7 +1195,7 @@ export default function ComparisonDetailPage() {
                 
                 <div className="bg-blue-900/20 border border-blue-800 rounded-md p-4 mb-4">
                   <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <span className="text-blue-400 text-lg">ℹ️</span>
                     </div>
                     <div>
@@ -1268,7 +1268,7 @@ export default function ComparisonDetailPage() {
                 {!isAnalyzingFiles && analysisResults.length > 0 && analysisResults.every(r => r.status === 'error') && (
                   <div className="mt-4 bg-red-900/20 border border-red-800 rounded-md p-4">
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <span className="text-red-400 text-lg">❌</span>
                       </div>
                       <div>
@@ -1359,7 +1359,7 @@ export default function ComparisonDetailPage() {
                             
                             return (
                               <div key={property.key} className="flex justify-between items-center text-sm">
-                                <span className={`w-32 flex-shrink-0 truncate ${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`} title={property.name}>{property.name}</span>
+                                <span className={`w-32 shrink-0 truncate ${isBest ? 'text-green-400 font-medium' : 'text-gray-300'}`} title={property.name}>{property.name}</span>
                                 <span className={`font-medium text-right flex-1 ml-2 ${isBest ? 'text-green-400' : hasValue ? 'text-gray-100' : 'text-gray-500'}`}>
                                   {hasValue ? (
                                     property.type === 'rating' ? (

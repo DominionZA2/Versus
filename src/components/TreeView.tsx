@@ -56,7 +56,7 @@ function TreeNodeComponent({ node, level }: TreeNodeComponentProps) {
   return (
     <div className="select-none">
       <div 
-        className="flex items-center py-1 hover:bg-gray-700/50 rounded cursor-pointer"
+        className="flex items-center py-1 hover:bg-gray-700/50 rounded-sm cursor-pointer"
         style={{ paddingLeft: `${indentLevel}px` }}
         onClick={() => hasChildren && setIsExpanded(!isExpanded)}
       >

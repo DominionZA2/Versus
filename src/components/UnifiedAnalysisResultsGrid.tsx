@@ -123,7 +123,7 @@ export default function UnifiedAnalysisResultsGrid({ results, className = '' }: 
                   {propertyData.name}
                 </td>
                 <td className="py-4 px-6">
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-600 text-gray-300">
+                  <span className="inline-flex items-center px-2 py-1 rounded-sm text-xs bg-gray-600 text-gray-300">
                     {propertyData.type}
                   </span>
                 </td>

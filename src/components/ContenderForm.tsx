@@ -638,10 +638,10 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
   ) => {
     const currentValue = value !== undefined && value !== null ? value : '';
     const isUpdated = updatedProperties.has(property.key);
-    const baseClasses = "w-full px-3 py-2 bg-gray-700 border text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500";
+    const baseClasses = "w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500";
     const updatedClasses = isUpdated 
-      ? "border-green-400 bg-green-900/20 shadow-lg shadow-green-500/20" 
-      : "border-gray-600";
+      ? "!border-green-400 bg-green-900/20 shadow-lg shadow-green-500/20"
+      : "";
 
     switch (property.type) {
       case 'text':
@@ -724,7 +724,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="Contender name"
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             autoFocus
           />
         </div>
@@ -744,7 +744,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                   <button
                     type="button"
                     onClick={handleUndoAnalysis}
-                    className="text-xs bg-gray-600 hover:bg-gray-500 text-gray-100 px-2 py-1 rounded transition-colors"
+                    className="text-xs bg-gray-600 hover:bg-gray-500 text-gray-100 px-2 py-1 rounded-sm transition-colors"
                   >
                     ↶ Undo AI Changes
                   </button>
@@ -762,7 +762,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                   <button
                     type="button"
                     onClick={handleAIAnalysis}
-                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm px-3 py-1 rounded-md transition-all transform hover:scale-105 shadow-lg"
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm px-3 py-1 rounded-md transition-all hover:scale-105 shadow-lg"
                     title="Use AI to analyze attached files and links to automatically fill property values"
                   >
                     <span className="text-xs">⚡</span>
@@ -782,7 +782,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
             <div className="space-y-3">
               {comparison.properties.map((property) => (
                 <div key={property.key} className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-gray-300 min-w-0 flex-shrink-0 w-32">
+                  <label className="text-sm font-medium text-gray-300 min-w-0 shrink-0 w-32">
                     {property.name}:
                   </label>
                   <div className="flex-1">
@@ -799,7 +799,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                     <button
                       type="button"
                       onClick={() => handleUndoProperty(property.key)}
-                      className="text-xs bg-amber-600 hover:bg-amber-500 text-white px-2 py-1 rounded transition-colors flex items-center gap-1 flex-shrink-0"
+                      className="text-xs bg-amber-600 hover:bg-amber-500 text-white px-2 py-1 rounded-sm transition-colors flex items-center gap-1 shrink-0"
                       title={`Undo AI change for ${property.name}`}
                     >
                       <span className="text-xs">↶</span>
@@ -848,7 +848,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                       <button
                         type="button"
                         onClick={() => handleOpenFile(file)}
-                        className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded transition-colors"
+                        className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded-sm transition-colors"
                         title="Open in browser"
                       >
                         Open
@@ -856,7 +856,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(file.id)}
-                        className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded transition-colors"
+                        className="text-xs bg-red-600 hover:bg-red-500 text-white px-2 py-1 rounded-sm transition-colors"
                         title="Remove file"
                       >
                         Remove
@@ -880,7 +880,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                 value={link}
                 onChange={(e) => updateArray('hyperlinks', index, e.target.value)}
                 placeholder="Enter a URL (e.g., https://example.com)"
-                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
               {formData.hyperlinks.length > 1 && (
                 <button
@@ -914,7 +914,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                   value={pro}
                   onChange={(e) => updateArray('pros', index, e.target.value)}
                   placeholder="Enter a pro"
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-green-500"
                 />
                 {formData.pros.length > 1 && (
                   <button
@@ -947,7 +947,7 @@ export default function ContenderForm({ comparison, mode, existingContender, onS
                   value={con}
                   onChange={(e) => updateArray('cons', index, e.target.value)}
                   placeholder="Enter a con"
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 text-gray-100 placeholder-gray-400 rounded-md focus:outline-hidden focus:ring-2 focus:ring-red-500"
                 />
                 {formData.cons.length > 1 && (
                   <button

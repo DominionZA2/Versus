@@ -555,7 +555,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   type="checkbox"
                   checked={tempProviderEnabled.anthropic}
                   onChange={(e) => handleTempProviderEnabledChange('anthropic', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded-sm focus:ring-blue-500 focus:ring-2"
                 />
                 <span>Enabled</span>
               </label>
@@ -566,7 +566,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                 value={tempApiKeys.anthropic}
                 onChange={(e) => handleTempApiKeyChange('anthropic', e.target.value)}
                 placeholder={getApiKeyPlaceholder('anthropic')}
-                className="w-full px-3 py-2 pr-20 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 pr-20 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
@@ -603,7 +603,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
               )}
             </div>
             {connectionStatus['anthropic'] === 'error' && testError['anthropic'] && (
-              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded-sm text-red-400 text-xs">
                 <p className="font-semibold mb-1">Connection Failed:</p>
                 <pre className="whitespace-pre-wrap">{testError['anthropic']}</pre>
               </div>
@@ -621,7 +621,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   type="checkbox"
                   checked={tempProviderEnabled.openai}
                   onChange={(e) => handleTempProviderEnabledChange('openai', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded-sm focus:ring-blue-500 focus:ring-2"
                 />
                 <span>Enabled</span>
               </label>
@@ -632,7 +632,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                 value={tempApiKeys.openai}
                 onChange={(e) => handleTempApiKeyChange('openai', e.target.value)}
                 placeholder={getApiKeyPlaceholder('openai')}
-                className="w-full px-3 py-2 pr-20 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 pr-20 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
@@ -669,7 +669,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
               )}
             </div>
             {connectionStatus['openai'] === 'error' && testError['openai'] && (
-              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded-sm text-red-400 text-xs">
                 <p className="font-semibold mb-1">Connection Failed:</p>
                 <pre className="whitespace-pre-wrap">{testError['openai']}</pre>
               </div>
@@ -687,7 +687,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   type="checkbox"
                   checked={tempProviderEnabled.gemini}
                   onChange={(e) => handleTempProviderEnabledChange('gemini', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded-sm focus:ring-blue-500 focus:ring-2"
                 />
                 <span>Enabled</span>
               </label>
@@ -698,7 +698,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                 value={tempApiKeys.gemini}
                 onChange={(e) => handleTempApiKeyChange('gemini', e.target.value)}
                 placeholder={getApiKeyPlaceholder('gemini')}
-                className="w-full px-3 py-2 pr-20 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 pr-20 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
               <button
                 type="button"
@@ -735,7 +735,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
               )}
             </div>
             {connectionStatus['gemini'] === 'error' && testError['gemini'] && (
-              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded-sm text-red-400 text-xs">
                 <p className="font-semibold mb-1">Connection Failed:</p>
                 <pre className="whitespace-pre-wrap">{testError['gemini']}</pre>
               </div>
@@ -753,7 +753,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                   type="checkbox"
                   checked={tempProviderEnabled.ollama}
                   onChange={(e) => handleTempProviderEnabledChange('ollama', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                  className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded-sm focus:ring-blue-500 focus:ring-2"
                 />
                 <span>Enabled</span>
               </label>
@@ -764,7 +764,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
                 value={tempBaseUrls.ollama}
                 onChange={(e) => handleTempBaseUrlChange('ollama', e.target.value)}
                 placeholder="http://localhost:11434"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div className="mt-2 flex items-center justify-between">
@@ -806,7 +806,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
               )}
             </div>
             {connectionStatus['ollama'] === 'error' && testError['ollama'] && (
-              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded text-red-400 text-xs">
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-800 rounded-sm text-red-400 text-xs">
                 <p className="font-semibold mb-1">Connection Failed:</p>
                 <pre className="whitespace-pre-wrap">{testError['ollama']}</pre>
               </div>
@@ -823,7 +823,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
             <select
               value={tempDefaultModel}
               onChange={(e) => handleTempDefaultModelChange(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             >
               {getAllModels.map(option => (
                 <option key={option.value} value={option.value}>

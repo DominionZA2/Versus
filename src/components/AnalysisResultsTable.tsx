@@ -98,7 +98,7 @@ export default function AnalysisResultsTable({ data, sourceInfo, className = '' 
                     {formatValue(property.value, property.type)}
                   </td>
                   <td className="py-3 px-4 text-gray-400 text-sm">
-                    <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-600">
+                    <span className="inline-flex items-center px-2 py-1 rounded-sm text-xs bg-gray-600">
                       {property.type || 'text'}
                     </span>
                   </td>

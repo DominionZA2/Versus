@@ -101,9 +101,9 @@ export default function ComparisonForm({ mode, existingComparison }: ComparisonF
                   if (error) setError(''); // Clear error when user starts typing
                 }}
                 placeholder="e.g., Best Laptops for 2024, Coffee Shop Comparison"
-                className={`w-full px-3 py-2 bg-gray-700 border text-gray-100 placeholder-gray-400 rounded-md focus:outline-none focus:ring-2 ${
-                  error 
-                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                className={`w-full px-3 py-2 bg-gray-700 border text-gray-100 placeholder-gray-400 rounded-md focus:outline-hidden focus:ring-2 ${
+                  error
+                    ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
                     : 'border-gray-600 focus:ring-blue-500 focus:border-blue-500'
                 }`}
                 autoFocus
